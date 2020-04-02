@@ -3,7 +3,7 @@
 This README file describes succintly the program computing
 bounds for the diameter massive graphs.
 
-* QUICKSTART *
+# QUICKSTART 
 **************
 1. Compile the program:
 
@@ -23,7 +23,7 @@ or
   or until the diameter is estimated with a relative error
   of at most 'precision'.
 
-* INPUT FORMAT *
+# INPUT FORMAT 
 ****************
 The program reads plain text ; the first line must be the number n
 of nodes ; then comes a series of lines of the form 'i j' meaning
@@ -46,7 +46,7 @@ has degree 2, and node 2 has degree 2 too, and the links are 0 1,
 0 2 and 2 1)
 
 
-* COMMAND LINE OPTIONS *
+# COMMAND LINE OPTIONS 
 ************************
 
 The standard way of using the program is to compute both upper and 
@@ -90,7 +90,7 @@ bounds):
     node).
 
 
-* OUTPUT *
+# OUTPUT 
 **********
 The program writes the results on the standard output. Thus,
 if you want to save them you should redirect it, using
@@ -112,7 +112,7 @@ obtained so far are provided.
 The first line of the output specifies which column provides which
 information.
 
-* PORTABILITY *
+# PORTABILITY 
 ***************
 The program is written in ANSI C, with standard libraries.
 
