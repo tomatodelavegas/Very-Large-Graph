@@ -6,6 +6,7 @@
 *.ko
 *.obj
 *.elf
+main
 
 # Linker output
 *.ilk
@@ -50,3 +51,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# VSCode
+.vscode/
