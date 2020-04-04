@@ -261,6 +261,97 @@ void usage(char *c){
   exit(-1);
 }
 
+/** MOD: Added TODO: REMOVE ME **/
+void print_arr(FILE * f, int *a, int s) {
+  fprintf(f, "\narray :");
+  for (int i = 0; i < s; ++i) {
+    fprintf(f, "\n%d -> %d", i, a[i]);
+  }
+}
+
+/** MOD: Added in place graph saving using BFS and edges correspondence array **/
+void save_giant_1(graph *g, int *c, int c_giant, int size_giant, char *path) {
+  int v, u; // current node, child node
+  int *corresp; // correspondence array
+  queue *q; // queue for the bfs
+  int n; // current new graph max index
+  int i;
+  int *m; // visited link matrix TODO: optim size (see below)
+  // visited link matrix, m.get(x,y) = m[min(x,y)][max(x,y) - 1 - min(x,y)]; size = (g->n - 1)(g->n) / 2
+  FILE *f; // output FILE
+  if ((m = (int *)calloc(((g->n) * (g->n + 1)) / 2, sizeof(int))) == NULL)
+    report_error("save_giant: link matrix: calloc() error");
+  /**
+   ** premature optim is the root of all evil
+  if ((m = (int **)calloc((g->n - 1), sizeof(int))) == NULL)
+    report_error("save_giant: link matrix: malloc() error");
+  for (i = 0; i < g->n - 1; ++i) {
+    if ((m[i] = (int *)calloc((g->n - 1 - i), sizeof(int))) == NULL)
+      report_error("save_giant: link matrix in loop: malloc() error");
+  }
+  **/
+  if ((corresp=(int *)malloc(g->n * sizeof(int))) == NULL) // FIXME: we will need to realloc
+    report_error("save_giant: correspondance array: malloc() error");
+  for (v = 0; v < g->n && c[v] != c_giant; ++v)
+    corresp[v] = -1;
+  if (v == g->n) {
+    free(corresp);
+    report_error("save_giant: wrong giant component id");
+  }
+  for (i = v; i < g->n; ++i)
+    corresp[i] = -1;
+  f = fopen(path, "w");
+  fprintf(f, "%d", size_giant); // writing giant component size to file
+  /** BFS starting from u **/
+  n = 0;
+  print_arr(stdout, corresp, g->n);
+  q = empty_queue(g->n);
+  queue_add(q,v);
+  corresp[v] = n;
+  print_arr(stdout, corresp, g->n);
+  n++;
+  while (!is_empty_queue(q)) {
+    v = queue_get(q);
+    // degrees: here we fprint corresp[v] and g->degrees[v]
+    fprintf(f, "\ndegree: %d %d", corresp[v], g->degrees[v]);
+    for (i = 0; i < g->degrees[v]; i++) {
+      u = g->links[v][i];
+      // links: there is a link from v to u, but have we done this LINK ?
+      // if we have then it means corresp[u] != -1, since undirected
+      // if we have not, then corresp[u] == -1
+      if (corresp[u] == -1) {
+	      queue_add(q,u);
+	      corresp[u] = n;
+        // links: here we fprint (or store) corresp[v] corresp[u]
+        n++;
+      }
+      
+      if (m[min(corresp[u],corresp[v]) * (g->n) + max(corresp[u],corresp[v]) - 1 - min(corresp[u],corresp[v])] == 0) {
+        fprintf(f, "\nlink: %d %d", corresp[v], corresp[u]);
+        m[min(corresp[u],corresp[v]) * (g->n) + max(corresp[u],corresp[v]) - 1 - min(corresp[u],corresp[v])] = 1;
+      }
+      /**
+       ** premature optim is the root of all evil
+      if (m[min(corresp[u],corresp[v])][max(corresp[u],corresp[v]) - 1 - min(corresp[u],corresp[v])] == 0) {
+        fprintf(f, "\nlink: %d %d", corresp[v], corresp[u]);
+        m[min(corresp[u],corresp[v])][max(corresp[u],corresp[v]) - 1 - min(corresp[u],corresp[v])] = 1;
+      } else {
+        printf("\neq: %d", m[min(corresp[u],corresp[v])][max(corresp[u],corresp[v]) - 1 - min(corresp[u],corresp[v])]);
+        fprintf(f, "\nseen: %d %d", corresp[v], corresp[u]);
+      }**/
+      print_arr(stdout, corresp, g->n);
+    }
+  }
+  /**
+  for (i = g->n - 1; i > 0; --i) {
+    free(m[i]);
+  }**/
+  free(m);
+  free_queue(q);
+  free(corresp);
+  fclose(f);
+}
+
 
 /* MAIN */
 int main(int argc, char **argv){
@@ -384,7 +475,7 @@ int main(int argc, char **argv){
     }
   } else if (savegiant) {
     printf("%s\n", "Saving graph...");
-    save_giant(g, c, c_giant, savegiant_path);
+    save_giant_1(g, c, c_giant, size_giant, savegiant_path);
   }
 
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */

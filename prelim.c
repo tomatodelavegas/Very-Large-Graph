@@ -56,6 +56,11 @@ int max(int i, int j){
   return(j);
 }
 
+/** MOD: Added **/
+int min(int a, int b) {
+  return a < b ? a : b;
+}
+
 int index_max_array(int *a, int n){
   int i, index_max, max;
   if (n<=0)
@@ -367,6 +372,7 @@ void random_renumbering(graph *g){
 
 
 /** MOD: Added for perm giant component graph saving renumbering 
+ ** TODO: REMOVEME
  ** int g_size: the base graph size
  ** int *c: the nodes component indexes array
  ** int c_giant: the giant component index
@@ -386,10 +392,17 @@ int *giant_perm(int g_size, int *c, int c_giant, int *new_n){
       perm[u] = -1; // WATCH OUT: this will need to be checked in code, valid only in our code (so for saving)
     }
   }
+  // REMOVEME
+  /**
+  printf("%d\n", *new_n);
+  for (int i = 0; i < g_size; ++i) {
+    printf("%d -> %d\n", i, perm[i]);
+  }**/
   return (perm);
 }
 
 /** MOD: Added to save giant connected component 
+ ** TODO: REMOVE ME
  ** graph *g: the graph we want to save the giant component
  ** int *c: the nodes component indexes array
  ** int c_giant: the giant component index
@@ -420,7 +433,7 @@ void save_giant(graph *g, int *c, int c_giant, char *path) {
   fprintf(f, "%d", new_n); // writing giant component size to file
   //printf("%s\n", "wrote to file");
   for (u = 0; u < g->n; u++) {
-    if (c[u] == c_giant) {
+    if (perm[u] > 0) { //if (c[u] == c_giant) { // Not suitable since permuted FIXME
       fputs("\n", f);
       int d = 0;
       for (v = 0; v < g->degrees[u]; ++v) {
