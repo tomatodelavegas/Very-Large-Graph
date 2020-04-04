@@ -365,9 +365,44 @@ void random_renumbering(graph *g){
 
 /******** PERSONNAL SAVING function - begin *********/
 
-/** MOD: Added to save giant connected component (TODO: put me in prelim.c) **/
-void save_giant(graph *g, int *c, int c_giant, int *new_n, char *fname) {
-  // TODO: Save
+
+/** MOD: Added for perm giant component graph saving renumbering 
+ ** int g_size: the base graph size
+ ** int *c: the nodes component indexes array
+ ** int c_giant: the giant component index
+ ** int *new_n: the integer address where to write the new graphs size /!\ not an array
+ **/
+int *giant_perm(int g_size, int *c, int c_giant, int *new_n){
+  int *perm;
+  int u = 0;
+  *new_n = 0;
+  if ((perm=(int *)malloc(g_size * sizeof(int))) == NULL) // FIXME: we will need to realloc
+    report_error("giant_perm: malloc() error");
+  for (; u < g_size; u++) {
+    if (c[u] == c_giant) {
+      perm[u] = *new_n;
+      *new_n = *new_n + 1;
+    } else {
+      perm[u] = -1; // WATCH OUT: this will need to be checked in code, valid only in our code (so for saving)
+    }
+  }
+  return (perm);
+}
+
+/** MOD: Added to save giant connected component 
+ ** graph *g: the graph we want to save the giant component
+ ** int *c: the nodes component indexes array
+ ** int c_giant: the giant component index
+ ** char *path: the path where to save the giant component graph
+ **/
+void save_giant(graph *g, int *c, int c_giant, char *path) {
+  //printf("%s\n", "giant_perm call...");
+  int new_n;
+  /** Renumbering graph using giant_perm **/
+  int *perm;
+  perm = giant_perm(g->n, c, c_giant, &new_n);
+  renumbering(g, perm);
+  //printf("%s\n", "giant_perm computed");
   /* TODO: we could also destroy each node and linked nodes
   * if not in this giant component, then save what is left
   * First line = number of nodes = size of giant component = g->n
@@ -380,47 +415,34 @@ void save_giant(graph *g, int *c, int c_giant, int *new_n, char *fname) {
   */
   int u, v;
   FILE *f;
-  f = fopen(fname + '_giant', "w");
-  fprintf(f, "%s\n", *new_n); // writing giant component size to file
+  f = fopen(path, "w");
+  //printf("%s\n", "file opened");
+  fprintf(f, "%d", new_n); // writing giant component size to file
+  //printf("%s\n", "wrote to file");
   for (u = 0; u < g->n; u++) {
     if (c[u] == c_giant) {
+      fputs("\n", f);
       int d = 0;
       for (v = 0; v < g->degrees[u]; ++v) {
         if (g->links[u][v] != -1) {
           d++;
         }
       }
-      fprintf(f, "%d %d\n", u, d); // writing degree of node u (u d)
+      fprintf(f, "%d %d", u, d); // writing degree of node u (u d)
     }
   }
   for (u = 0; u < g->n; u++) {
     if (c[u] == c_giant) {
       for (v = 0; v < g->degrees[u]; ++v) {
         if (g->links[u][v] != -1) {
+          fputs("\n", f);
           fprintf(f, "%d %d", u, v); // writing vertices of node u (u v)
         }
       }
     }
   }
   fclose(f);
-}
-
-/** MOD: Added for perm giant component graph saving renumbering (TODO: put me in prelim.c) **/
-int *giant_perm(graph *g, int *c, int c_giant, int *new_n){
-  *new_n = 0;
-  int *perm;
-  int u = 0;
-  if ((perm=(int *)malloc(g->n * sizeof(int))) == NULL) // FIXME: we will need to realloc
-    report_error("giant_perm: malloc() error");
-  for (; u < g->n; u++) {
-    if (c[u] == c_giant) {
-      perm[u] = *new_n;
-      *new_n = *new_n + 1;
-    } else {
-      perm[u] = -1; // WATCH OUT: this will need to be checked in code, valid only in our code (so for saving)
-    }
-  }
-  return (perm);
+  free(perm);
 }
 
 /******** PERSONNAL SAVING function - end *********/
