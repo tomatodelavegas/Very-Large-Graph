@@ -10,7 +10,6 @@
 #include <time.h>
 
 #include <stdbool.h> // MOD: Added
-#include <strings.h> // MOD: Added for bzero
 
 #include "prelim.c"
 
@@ -281,17 +280,14 @@ void save_giant_degrees_or_links(bool links, FILE *f, bool *seen, int *corresp, 
   int n = 0; // current new graph max index
   int i;
   queue *q; // queue for the bfs
-  // Setting up corresp array
   for (v = 0; v < g->n && c[v] != c_giant; ++v)
-    corresp[v] = -1;
+    continue;
   if (v == g->n) {
     free(corresp); free(seen); free_graph(g); fclose(f);
     report_error("save_giant_degrees_or_links: wrong giant component id");
   }
-  for (i = v; i < g->n; ++i)
-    corresp[i] = -1;
-  // Setting up seen array
-  bzero(seen, g->n * sizeof(int));
+  memset(corresp, -1, g->n * sizeof(int)); // Setting up corresp array
+  memset(seen, 0, g->n * sizeof(bool)); // Setting up seen array
   if (!links)
     fprintf(f, "%d", size_giant); // writing giant component size to file
   else
@@ -305,7 +301,7 @@ void save_giant_degrees_or_links(bool links, FILE *f, bool *seen, int *corresp, 
     v = queue_get(q);
     seen[v] = 1;
     if (!links)
-      fprintf(f, "\ndegree: %d %d", corresp[v], g->degrees[v]); // degrees: here we fprint corresp[v] and g->degrees[v]
+      fprintf(f, "\n%d %d", corresp[v], g->degrees[v]); // degrees: here we fprint corresp[v] and g->degrees[v]
     for (i = 0; i < g->degrees[v]; i++) {
       u = g->links[v][i];
       if (corresp[u] == -1) {
@@ -314,7 +310,7 @@ void save_giant_degrees_or_links(bool links, FILE *f, bool *seen, int *corresp, 
         n++;
       }
       if (links && !seen[u]) { // links: here we fprint corresp[v] corresp[u]
-        fprintf(f, "\nlink: %d %d", corresp[v], corresp[u]);
+        fprintf(f, "\n%d %d", corresp[v], corresp[u]);
       }
     }
   }
