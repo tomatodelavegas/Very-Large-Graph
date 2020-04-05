@@ -10,6 +10,7 @@
 #include <time.h>
 
 #include <stdbool.h> // MOD: Added
+#include <strings.h> // MOD: Added for bzero
 
 #include "prelim.c"
 
@@ -263,68 +264,82 @@ void usage(char *c){
   exit(-1);
 }
 
-/** MOD: Added TODO: REMOVE ME **/
-void print_arr(FILE * f, int *a, int s) {
-  fprintf(f, "\narray :");
-  for (int i = 0; i < s; ++i) {
-    fprintf(f, "\n%d -> %d", i, a[i]);
-  }
-}
-
-/** MOD: Added in place graph saving using BFS and edges correspondence array **/
-void save_giant_1(graph *g, int *c, int c_giant, int size_giant, char *path) {
+/** MOD: Added to make a BFS either to append degrees to begining of given file or to append links to the end of f
+ ** bool links:     wether to append links or degrees (and graph size) to f
+ ** FILE *f:        opened FILE
+ ** bool *seen:     allocated g->n sized seen array for BFS node seen tracking
+ ** int *corresp:   allocated g->n correspondence array for in place renumbering
+ ** graph *g:       the graph to save the giant component
+ ** int *c:         the component indexes array
+ ** int size_giant: the size of the giant component
+ ** int c_giant:    the giant component index
+ **
+ ** improve?:       do not recompute the corresp array on second call ? not such a big deal
+ **/
+void save_giant_degrees_or_links(bool links, FILE *f, bool *seen, int *corresp, graph *g, int *c, int size_giant, int c_giant) {
   int v, u; // current node, child node
-  int *corresp; // correspondence array
-  queue *q; // queue for the bfs
-  int n; // current new graph max index
+  int n = 0; // current new graph max index
   int i;
-  bool *seen; // visited link array
-  FILE *f; // output FILE
-  if ((seen = (bool *)calloc(g->n, sizeof(int))) == NULL)
-    report_error("save_giant: seen array: calloc() error");
-  if ((corresp=(int *)malloc(g->n * sizeof(int))) == NULL) // FIXME: we will need to realloc
-    report_error("save_giant: correspondance array: malloc() error");
+  queue *q; // queue for the bfs
+  // Setting up corresp array
   for (v = 0; v < g->n && c[v] != c_giant; ++v)
     corresp[v] = -1;
   if (v == g->n) {
-    free(corresp); free(seen);
-    report_error("save_giant: wrong giant component id");
+    free(corresp); free(seen); free_graph(g); fclose(f);
+    report_error("save_giant_degrees_or_links: wrong giant component id");
   }
   for (i = v; i < g->n; ++i)
     corresp[i] = -1;
-  f = fopen(path, "w");
-  fprintf(f, "%d", size_giant); // writing giant component size to file
-  /** BFS starting from u **/
-  n = 0;
-  //print_arr(stdout, corresp, g->n);
+  // Setting up seen array
+  bzero(seen, g->n * sizeof(int));
+  if (!links)
+    fprintf(f, "%d", size_giant); // writing giant component size to file
+  else
+    fseek(f, 0, SEEK_END); // links are added to end of file
+  /** BFS starting from v **/
   q = empty_queue(g->n);
   queue_add(q,v);
   corresp[v] = n;
-  //print_arr(stdout, corresp, g->n);
   n++;
   while (!is_empty_queue(q)) {
     v = queue_get(q);
     seen[v] = 1;
-    // degrees: here we fprint corresp[v] and g->degrees[v]
-    fprintf(f, "\ndegree: %d %d", corresp[v], g->degrees[v]);
+    if (!links)
+      fprintf(f, "\ndegree: %d %d", corresp[v], g->degrees[v]); // degrees: here we fprint corresp[v] and g->degrees[v]
     for (i = 0; i < g->degrees[v]; i++) {
       u = g->links[v][i];
-      // links: there is a link from v to u, but have we done this LINK ?
-      // if we have then it means corresp[u] != -1, since undirected
-      // if we have not, then corresp[u] == -1
       if (corresp[u] == -1) {
 	      queue_add(q,u);
 	      corresp[u] = n;
-        // links: here we fprint (or store) corresp[v] corresp[u]
         n++;
       }
-      
-      if (!seen[u]) {
+      if (links && !seen[u]) { // links: here we fprint corresp[v] corresp[u]
         fprintf(f, "\nlink: %d %d", corresp[v], corresp[u]);
       }
     }
   }
   free_queue(q);
+}
+
+/** MOD: Added in place graph saving using BFS and edges correspondence array
+ ** graph *g:       the graph to save the giant component
+ ** int *c:         the component indexes array
+ ** int c_giant:    the giant component index
+ ** int size_giant: the size of the giant component
+ ** char *path:     the path string to open the file
+ **/
+void save_giant_1(graph *g, int *c, int c_giant, int size_giant, char *path) {
+  int *corresp; // correspondence array
+  bool *seen; // visited link array
+  FILE *f; // output FILE
+  int i;
+  if ((seen = (bool *)malloc(g->n * sizeof(int))) == NULL)
+    report_error("save_giant: seen array: calloc() error");
+  if ((corresp=(int *)malloc(g->n * sizeof(int))) == NULL) // FIXME: we will need to realloc
+    report_error("save_giant: correspondance array: malloc() error");
+  f = fopen(path, "w");
+  save_giant_degrees_or_links(0, f, seen, corresp, g, c, size_giant, c_giant);
+  save_giant_degrees_or_links(1, f, seen, corresp, g, c, size_giant, c_giant);
   free(seen);
   free(corresp);
   fclose(f);

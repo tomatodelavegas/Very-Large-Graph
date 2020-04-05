@@ -325,7 +325,6 @@ int *sort_nodes_by_degrees(graph *g){ /* in O(m) time and O(n) space */
   return(resu);
 }
 
-/** MOD: modified to handle -1 values in permutation array (coming from not giant component nodes, see giant_perm) **/
 void renumbering(graph *g, int *perm){
   int *tmpp, **tmppp;
   int i, j;
@@ -341,18 +340,15 @@ void renumbering(graph *g, int *perm){
   
   memcpy(tmppp,g->links,g->n*sizeof(int *));
   for (i=g->n-1;i>=0;i--)
-    if (perm[i] >= 0) // MOD: -1 check for giant_perm function
-      g->links[perm[i]] = tmppp[i];
+    g->links[perm[i]] = tmppp[i];
   
   memcpy(tmpp,g->degrees,g->n*sizeof(int));
   for (i=g->n-1;i>=0;i--)
-   if (perm[i] >= 0) // MOD: -1 check for giant_perm function
-      g->degrees[perm[i]] = tmpp[i];
+    g->degrees[perm[i]] = tmpp[i];
   
   memcpy(tmpp,g->capacities,g->n*sizeof(int));
   for (i=g->n-1;i>=0;i--)
-   if (perm[i] >= 0) // MOD: -1 check for giant_perm function
-      g->capacities[perm[i]] = tmpp[i];
+    g->capacities[perm[i]] = tmpp[i];
   
   free(tmpp);
   free(tmppp);
@@ -366,96 +362,3 @@ void random_renumbering(graph *g){
 }
 
 /******** GRAPH MANAGEMENT functions - end *********/
-
-
-/******** PERSONNAL SAVING function - begin *********/
-
-
-/** MOD: Added for perm giant component graph saving renumbering 
- ** TODO: REMOVEME
- ** int g_size: the base graph size
- ** int *c: the nodes component indexes array
- ** int c_giant: the giant component index
- ** int *new_n: the integer address where to write the new graphs size /!\ not an array
- **/
-int *giant_perm(int g_size, int *c, int c_giant, int *new_n){
-  int *perm;
-  int u = 0;
-  *new_n = 0;
-  if ((perm=(int *)malloc(g_size * sizeof(int))) == NULL) // FIXME: we will need to realloc
-    report_error("giant_perm: malloc() error");
-  for (; u < g_size; u++) {
-    if (c[u] == c_giant) {
-      perm[u] = *new_n;
-      *new_n = *new_n + 1;
-    } else {
-      perm[u] = -1; // WATCH OUT: this will need to be checked in code, valid only in our code (so for saving)
-    }
-  }
-  // REMOVEME
-  /**
-  printf("%d\n", *new_n);
-  for (int i = 0; i < g_size; ++i) {
-    printf("%d -> %d\n", i, perm[i]);
-  }**/
-  return (perm);
-}
-
-/** MOD: Added to save giant connected component 
- ** TODO: REMOVE ME
- ** graph *g: the graph we want to save the giant component
- ** int *c: the nodes component indexes array
- ** int c_giant: the giant component index
- ** char *path: the path where to save the giant component graph
- **/
-void save_giant(graph *g, int *c, int c_giant, char *path) {
-  //printf("%s\n", "giant_perm call...");
-  int new_n;
-  /** Renumbering graph using giant_perm **/
-  int *perm;
-  perm = giant_perm(g->n, c, c_giant, &new_n);
-  renumbering(g, perm);
-  //printf("%s\n", "giant_perm computed");
-  /* TODO: we could also destroy each node and linked nodes
-  * if not in this giant component, then save what is left
-  * First line = number of nodes = size of giant component = g->n
-  * then series of nodes with degree u d (node u has degree d) /!\ ordered = g->degrees
-  * then series of links like u v for an edge between node u and node v = g->links
-  */
-  /* In place approach:
-  * use renumbering with a previously defined perm function which uses a special id for vertices not in giant component (see random_perm and renumbering functions)
-  * then go through renumbered graph and "ignore" nodes with -1 ?
-  */
-  int u, v;
-  FILE *f;
-  f = fopen(path, "w");
-  //printf("%s\n", "file opened");
-  fprintf(f, "%d", new_n); // writing giant component size to file
-  //printf("%s\n", "wrote to file");
-  for (u = 0; u < g->n; u++) {
-    if (perm[u] > 0) { //if (c[u] == c_giant) { // Not suitable since permuted FIXME
-      fputs("\n", f);
-      int d = 0;
-      for (v = 0; v < g->degrees[u]; ++v) {
-        if (g->links[u][v] != -1) {
-          d++;
-        }
-      }
-      fprintf(f, "%d %d", u, d); // writing degree of node u (u d)
-    }
-  }
-  for (u = 0; u < g->n; u++) {
-    if (c[u] == c_giant) {
-      for (v = 0; v < g->degrees[u]; ++v) {
-        if (g->links[u][v] != -1) {
-          fputs("\n", f);
-          fprintf(f, "%d %d", u, v); // writing vertices of node u (u v)
-        }
-      }
-    }
-  }
-  fclose(f);
-  free(perm);
-}
-
-/******** PERSONNAL SAVING function - end *********/
