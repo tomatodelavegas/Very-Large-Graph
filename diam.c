@@ -290,8 +290,6 @@ void save_giant_degrees_or_links(bool links, FILE *f, bool *seen, int *corresp, 
   memset(seen, 0, g->n * sizeof(bool)); // Setting up seen array
   if (!links)
     fprintf(f, "%d", size_giant); // writing giant component size to file
-  else
-    fseek(f, 0, SEEK_END); // links are added to end of file
   /** BFS starting from v **/
   q = empty_queue(g->n);
   queue_add(q,v);
