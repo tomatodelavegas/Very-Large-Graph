@@ -254,6 +254,7 @@ void usage(char *c){
   fprintf(stderr," -diam nb_max difference: compute bounds for the diameter until the difference between the best bounds is at most 'difference', or until nb_max iterations have been done.\n");
   fprintf(stderr," -prec nb_max precision: compute bounds for the diameter until it is evaluated with a relative error of at most 'precision', or until nb_max iterations have been done.\n");
   fprintf(stderr," -savegiant fpath: saves the giant component to the specified folder.\n"); // MOD: Added this option to save the giant component
+  fprintf(stderr," -savegiantbfs fpath: saves the giant component to the specified folder using BFS reordering.\n"); // MOD: Added this option to save the giant component (BFS method)
   fprintf(stderr, "\n");
   fprintf(stderr, " -tlb nb: computes trivial lower bounds, from nb randomly chosen nodes.\n");
   fprintf(stderr," -dslb nb: computes double-sweep lower bounds, from nb randomly chosen nodes.\n");
@@ -322,7 +323,7 @@ void save_giant_degrees_or_links(bool links, FILE *f, bool *seen, int *corresp, 
  ** int size_giant: the size of the giant component
  ** char *path:     the path string to open the file
  **/
-void save_giant_1(graph *g, int *c, int c_giant, int size_giant, char *path) {
+void save_giant_bfs(graph *g, int *c, int c_giant, int size_giant, char *path) {
   int *corresp; // correspondence array
   bool *seen; // visited link array
   FILE *f; // output FILE
@@ -345,7 +346,7 @@ int main(int argc, char **argv){
   graph *g;
   int i;
   int *sorted_nodes, *dist;
-  int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option, savegiant; // MOD
+  int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option, savegiant, savegiantbfs; // MOD
   char *savegiant_path = NULL; // MOD
   int deg_begin=0;
   float precision;
@@ -355,7 +356,7 @@ int main(int argc, char **argv){
   srandom(time(NULL));
 
   /* parse the command line */
-  tlb=0; diam = 0; prec_option=0; dslb=0; tub=0; rtub=0; savegiant = 0; // MOD
+  tlb=0; diam = 0; prec_option=0; dslb=0; tub=0; rtub=0; savegiant = 0, savegiantbfs = 0; // MOD
   hdtub=0;
   for (i=1; i<argc; i++){
     if (strcmp(argv[i],"-tlb")==0) {
@@ -366,6 +367,12 @@ int main(int argc, char **argv){
     }
     else if (strcmp(argv[i],"-savegiant")==0) { // MOD: Added option
       savegiant = 1;
+      if( i == argc-1 )
+ 	usage(argv[0]); 
+      savegiant_path = argv[++i];
+    }
+    else if (strcmp(argv[i],"-savegiantbfs")==0) { // MOD: Added option
+      savegiantbfs = 1;
       if( i == argc-1 )
  	usage(argv[0]); 
       savegiant_path = argv[++i];
@@ -412,7 +419,7 @@ int main(int argc, char **argv){
     else
       usage(argv[0]);
   }
-  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant != 1){ // MOD
+  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant+savegiantbfs != 1){ // MOD
     usage(argv[0]);
   }
   
@@ -460,9 +467,18 @@ int main(int argc, char **argv){
       printf("%d %d %d %d\n",step++,v, g->degrees[v], new_lower);
       fflush(stdout);
     }
-  } else if (savegiant) {
+  } else if (savegiant || savegiantbfs) {
+    clock_t begin, end;
+    double elapsed;
     printf("%s\n", "Saving graph...");
-    save_giant_1(g, c, c_giant, size_giant, savegiant_path);
+    begin = clock();
+    if (savegiant)
+      save_giant(g, c, c_giant, size_giant, savegiant_path);
+    else
+      save_giant_bfs(g, c, c_giant, size_giant, savegiant_path);
+    end = clock();
+    elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("Saved in %f seconds\n", elapsed);
   }
 
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */

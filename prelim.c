@@ -172,6 +172,25 @@ int *inverse_perm(int *p, int n){
   return(perm);
 }
 
+/** MOD: Added giant component renumbering (not giant components renumbered to end) **/
+int *giant_perm(graph *g, int *c, int size_giant, int c_giant) {
+  int *perm;
+  int i;
+  int lw, up; // lower bound, upper bound
+  if( (perm=(int *)malloc(g->n*sizeof(int))) == NULL )
+    report_error("giant_perm: malloc() error");
+  lw = 0;
+  up = g->n - 1;
+  for (i = 0; i < g->n ; ++i) {
+    if (c[i] == c_giant) {
+      perm[i] = lw; lw++;
+    } else {
+      perm[i] = up; up--;
+    }
+  }
+  return (perm);
+}
+
 /******** UTILITY functions - end *********/
 
 /******** GRAPH MANAGEMENT functions - begin *********/
@@ -362,3 +381,31 @@ void random_renumbering(graph *g){
 }
 
 /******** GRAPH MANAGEMENT functions - end *********/
+
+/******** GRAPH PERSONNAL functions - begin *********/
+
+/** MOD: Added to save graph up to a limit (the new graph size if previously correctly renumbered) **/
+void graph_to_file(graph *g, FILE *f, int limit) {
+  int i, j;
+  fprintf(f, "%d", limit);
+  for (i = 0; i < limit; ++i)
+    fprintf(f, "\n%d %d", i, g->degrees[i]);
+  for (i = 0; i < limit; ++i)
+    for (j = 0; j < g->degrees[i]; ++j)
+      if (g->links[i][j] > i)
+        fprintf(f, "\n%d %d", i, g->links[i][j]);
+}
+
+/** MOD: Added to save giant graph without a BFS but using permutations **/
+void save_giant(graph *g, int *c, int c_giant, int size_giant, char *path) {
+  int *perm;
+  FILE *f; // output FILE
+  f = fopen(path, "w");
+  perm = giant_perm(g, c, size_giant, c_giant);
+  renumbering(g,perm);
+  graph_to_file(g, f, size_giant);
+  free(perm);
+  fclose(f);
+}
+
+/******** GRAPH PERSONNAL functions - end *********/
