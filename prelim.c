@@ -4,14 +4,18 @@
 /* http://www-rp.lip6.fr/~magnien/Diameter */
 /* clemence.magnien@lip6.fr */
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 #define MAX_LINE_LENGTH 1000
 
 typedef struct graph{
-  int n;
-  int m;
+  int n; // number of nodes
+  int m; // number of links
   int **links;
-  int *degrees;
+  int *degrees; // capacities <=> degrees
   int *capacities;
 } graph;
 
@@ -50,6 +54,11 @@ int max(int i, int j){
   if (i>j)
     return(i);
   return(j);
+}
+
+/** MOD: Added **/
+int min(int a, int b) {
+  return a < b ? a : b;
 }
 
 int index_max_array(int *a, int n){
@@ -163,6 +172,25 @@ int *inverse_perm(int *p, int n){
   return(perm);
 }
 
+/** MOD: Added giant component renumbering (not giant components renumbered to end) **/
+int *giant_perm(graph *g, int *c, int size_giant, int c_giant) {
+  int *perm;
+  int i;
+  int lw, up; // lower bound, upper bound
+  if( (perm=(int *)malloc(g->n*sizeof(int))) == NULL )
+    report_error("giant_perm: malloc() error");
+  lw = 0;
+  up = g->n - 1;
+  for (i = 0; i < g->n ; ++i) {
+    if (c[i] == c_giant) {
+      perm[i] = lw; lw++;
+    } else {
+      perm[i] = up; up--;
+    }
+  }
+  return (perm);
+}
+
 /******** UTILITY functions - end *********/
 
 /******** GRAPH MANAGEMENT functions - begin *********/
@@ -227,6 +255,10 @@ graph *graph_from_file(FILE *f){
       report_error("graph_from_file: malloc() error 3");
     if( (g->links[0]=(int *)malloc(2*g->m*sizeof(int))) == NULL )
       report_error("graph_from_file: malloc() error 4");
+    // Every links are stored in only one array, the 0 index one
+    // Then each links[i] => i: node number
+    // This loop sets all the pointers to allow the good capacity of links to
+    // be written for each nodes
     for(i=1;i<g->n;i++)
       g->links[i] = g->links[i-1] + g->capacities[i-1];
   }
@@ -248,6 +280,7 @@ graph *graph_from_file(FILE *f){
       fprintf(stderr, "reading link %s\n", line);
       report_error("graph_from_file: too many links for a node");
     }
+   // For node u write the linked node in the next available int place
     g->links[u][g->degrees[u]] = v;
     g->degrees[u]++;
     g->links[v][g->degrees[v]] = u;
@@ -349,4 +382,30 @@ void random_renumbering(graph *g){
 
 /******** GRAPH MANAGEMENT functions - end *********/
 
+/******** GRAPH PERSONNAL functions - begin *********/
 
+/** MOD: Added to save graph up to a limit (the new graph size if previously correctly renumbered) **/
+void graph_to_file(graph *g, FILE *f, int limit) {
+  int i, j;
+  fprintf(f, "%d", limit);
+  for (i = 0; i < limit; ++i)
+    fprintf(f, "\n%d %d", i, g->degrees[i]);
+  for (i = 0; i < limit; ++i)
+    for (j = 0; j < g->degrees[i]; ++j)
+      if (g->links[i][j] > i)
+        fprintf(f, "\n%d %d", i, g->links[i][j]);
+}
+
+/** MOD: Added to save giant graph without a BFS but using permutations **/
+void save_giant(graph *g, int *c, int c_giant, int size_giant, char *path) {
+  int *perm;
+  FILE *f; // output FILE
+  f = fopen(path, "w");
+  perm = giant_perm(g, c, size_giant, c_giant);
+  renumbering(g,perm);
+  graph_to_file(g, f, size_giant);
+  free(perm);
+  fclose(f);
+}
+
+/******** GRAPH PERSONNAL functions - end *********/

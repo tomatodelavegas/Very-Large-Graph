@@ -9,6 +9,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <stdbool.h> // MOD: Added
+
 #include "prelim.c"
 
 /******** QUEUE functions - begin *********/
@@ -251,6 +253,8 @@ void usage(char *c){
   fprintf(stderr, "\n");
   fprintf(stderr," -diam nb_max difference: compute bounds for the diameter until the difference between the best bounds is at most 'difference', or until nb_max iterations have been done.\n");
   fprintf(stderr," -prec nb_max precision: compute bounds for the diameter until it is evaluated with a relative error of at most 'precision', or until nb_max iterations have been done.\n");
+  fprintf(stderr," -savegiant fpath: saves the giant component to the specified folder.\n"); // MOD: Added this option to save the giant component
+  fprintf(stderr," -savegiantbfs fpath: saves the giant component to the specified folder using BFS reordering.\n"); // MOD: Added this option to save the giant component (BFS method)
   fprintf(stderr, "\n");
   fprintf(stderr, " -tlb nb: computes trivial lower bounds, from nb randomly chosen nodes.\n");
   fprintf(stderr," -dslb nb: computes double-sweep lower bounds, from nb randomly chosen nodes.\n");
@@ -260,13 +264,90 @@ void usage(char *c){
   exit(-1);
 }
 
+/** MOD: Added to make a BFS either to append degrees to begining of given file or to append links to the end of f
+ ** bool links:     wether to append links or degrees (and graph size) to f
+ ** FILE *f:        opened FILE
+ ** bool *seen:     allocated g->n sized seen array for BFS node seen tracking
+ ** int *corresp:   allocated g->n correspondence array for in place renumbering
+ ** graph *g:       the graph to save the giant component
+ ** int *c:         the component indexes array
+ ** int size_giant: the size of the giant component
+ ** int c_giant:    the giant component index
+ **
+ ** improve?:       do not recompute the corresp array on second call ? not such a big deal
+ **/
+void save_giant_degrees_or_links(bool links, FILE *f, bool *seen, int *corresp, graph *g, int *c, int size_giant, int c_giant) {
+  int v, u; // current node, child node
+  int n = 0; // current new graph max index
+  int i;
+  queue *q; // queue for the bfs
+  for (v = 0; v < g->n && c[v] != c_giant; ++v)
+    continue;
+  if (v == g->n) {
+    free(corresp); free(seen); free_graph(g); fclose(f);
+    report_error("save_giant_degrees_or_links: wrong giant component id");
+  }
+  memset(corresp, -1, g->n * sizeof(int)); // Setting up corresp array
+  memset(seen, 0, g->n * sizeof(bool)); // Setting up seen array
+  if (!links)
+    fprintf(f, "%d", size_giant); // writing giant component size to file
+  /** BFS starting from v **/
+  q = empty_queue(g->n);
+  queue_add(q,v);
+  corresp[v] = n;
+  n++;
+  while (!is_empty_queue(q)) {
+    v = queue_get(q);
+    seen[v] = 1;
+    if (!links)
+      fprintf(f, "\n%d %d", corresp[v], g->degrees[v]); // degrees: here we fprint corresp[v] and g->degrees[v]
+    for (i = 0; i < g->degrees[v]; i++) {
+      u = g->links[v][i];
+      if (corresp[u] == -1) {
+	      queue_add(q,u);
+	      corresp[u] = n;
+        n++;
+      }
+      if (links && !seen[u]) { // links: here we fprint corresp[v] corresp[u]
+        fprintf(f, "\n%d %d", corresp[v], corresp[u]);
+      }
+    }
+  }
+  free_queue(q);
+}
+
+/** MOD: Added in place graph saving using BFS and edges correspondence array
+ ** graph *g:       the graph to save the giant component
+ ** int *c:         the component indexes array
+ ** int c_giant:    the giant component index
+ ** int size_giant: the size of the giant component
+ ** char *path:     the path string to open the file
+ **/
+void save_giant_bfs(graph *g, int *c, int c_giant, int size_giant, char *path) {
+  int *corresp; // correspondence array
+  bool *seen; // visited link array
+  FILE *f; // output FILE
+  int i;
+  if ((seen = (bool *)malloc(g->n * sizeof(int))) == NULL)
+    report_error("save_giant: seen array: calloc() error");
+  if ((corresp=(int *)malloc(g->n * sizeof(int))) == NULL) // FIXME: we will need to realloc
+    report_error("save_giant: correspondance array: malloc() error");
+  f = fopen(path, "w");
+  save_giant_degrees_or_links(0, f, seen, corresp, g, c, size_giant, c_giant);
+  save_giant_degrees_or_links(1, f, seen, corresp, g, c, size_giant, c_giant);
+  free(seen);
+  free(corresp);
+  fclose(f);
+}
+
 
 /* MAIN */
 int main(int argc, char **argv){
   graph *g;
   int i;
   int *sorted_nodes, *dist;
-  int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option;
+  int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option, savegiant, savegiantbfs; // MOD
+  char *savegiant_path = NULL; // MOD
   int deg_begin=0;
   float precision;
   int *c, *c_s, nb_c, c_giant, size_giant;
@@ -275,7 +356,7 @@ int main(int argc, char **argv){
   srandom(time(NULL));
 
   /* parse the command line */
-  tlb=0; diam = 0; prec_option=0; dslb=0; tub=0; rtub=0; 
+  tlb=0; diam = 0; prec_option=0; dslb=0; tub=0; rtub=0; savegiant = 0, savegiantbfs = 0; // MOD
   hdtub=0;
   for (i=1; i<argc; i++){
     if (strcmp(argv[i],"-tlb")==0) {
@@ -283,6 +364,18 @@ int main(int argc, char **argv){
       if( i == argc-1 )
  	usage(argv[0]); 
       nb_max = atoi(argv[++i]);
+    }
+    else if (strcmp(argv[i],"-savegiant")==0) { // MOD: Added option
+      savegiant = 1;
+      if( i == argc-1 )
+ 	usage(argv[0]); 
+      savegiant_path = argv[++i];
+    }
+    else if (strcmp(argv[i],"-savegiantbfs")==0) { // MOD: Added option
+      savegiantbfs = 1;
+      if( i == argc-1 )
+ 	usage(argv[0]); 
+      savegiant_path = argv[++i];
     }
     else if (strcmp(argv[i],"-diam")==0){
       diam = 1;
@@ -326,15 +419,15 @@ int main(int argc, char **argv){
     else
       usage(argv[0]);
   }
-  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub != 1){
+  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant+savegiantbfs != 1){ // MOD
     usage(argv[0]);
   }
   
   fprintf(stderr,"Preprocessing the graph...\n");
   fprintf(stderr," reading...\n");
   g = graph_from_file(stdin);
-  fprintf(stderr," random renumbering...\n");
-  random_renumbering(g);
+  //fprintf(stderr," random renumbering...\n"); // MOD
+  //random_renumbering(g); // MOD
   fprintf(stderr," %d nodes, %d links.\n",g->n,g->m);
   fflush(stderr);
 
@@ -374,6 +467,18 @@ int main(int argc, char **argv){
       printf("%d %d %d %d\n",step++,v, g->degrees[v], new_lower);
       fflush(stdout);
     }
+  } else if (savegiant || savegiantbfs) {
+    clock_t begin, end;
+    double elapsed;
+    printf("%s\n", "Saving graph...");
+    begin = clock();
+    if (savegiant)
+      save_giant(g, c, c_giant, size_giant, savegiant_path);
+    else
+      save_giant_bfs(g, c, c_giant, size_giant, savegiant_path);
+    end = clock();
+    elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("Saved in %f seconds\n", elapsed);
   }
 
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */
