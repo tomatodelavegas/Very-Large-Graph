@@ -70,6 +70,9 @@ int queue_get(queue *q){
 
 /******** DISTANCE functions - begin *********/
 
+/*
+  Resulting tree is links between nodes from bfs process
+*/
 int *bfs_tree(graph *g, int v){
   int u, i;
   int *tree;
@@ -95,7 +98,9 @@ int *bfs_tree(graph *g, int v){
   return(tree);
 }
 
-/* degrees in a tree */
+/* degrees in a tree
+*  Compute degrees according to links between the nodes
+*/
 int *tree_degrees(int *t, int n){
   int i;
   int *r;
@@ -339,6 +344,111 @@ void save_giant_bfs(graph *g, int *c, int c_giant, int size_giant, char *path) {
   free(corresp);
   fclose(f);
 }
+
+/** MOD: Return the depth of each node
+ */
+int *depth_bfs_tree(graph *g, int v, int *max)
+{
+  int u, i;
+  int *tree;
+  int curr_depth = 0;
+  queue *q;
+  q = empty_queue(g->n);
+  if( (tree=(int *)malloc(g->n*sizeof(int))) == NULL )
+    report_error("bfs_tree: malloc() error");
+  for (i=0;i<g->n;i++)
+    tree[i] = -1;
+  queue_add(q,v);
+  queue_add(q, NULL);
+  tree[v] = curr_depth++;
+  while (!is_empty_queue(q)) {
+    v = queue_get(q);
+    if (v == NULL){
+      if (is_empty_queue(q))
+        break;
+      curr_depth++;
+      queue_add(q, NULL);
+      continue;
+    }
+    for (i=0;i<g->degrees[v];i++) {
+      u = g->links[v][i];
+      if (tree[u]==-1){
+	      queue_add(q,u);
+	      tree[u] = curr_depth;
+      }
+    }
+  }
+  free_queue(q);
+  return(tree);
+}
+
+/** MOD:
+ */
+void center_rayon(graph *g, int start, int max_diam, int *c, int c_giant)
+{
+  int **saved_bfs;
+  int *tree;
+  queue *q;
+  int v = start, u, i;
+
+  if  ((saved_bfs = (int**)malloc(max_diam * sizeof(int*))) == NULL)
+    report_error("center_rayon: saved_bfs: malloc() error");
+  q = empty_queue(g->n);
+
+  if( (tree=(int *)malloc(g->n*sizeof(int))) == NULL )
+    report_error("bfs_tree: malloc() error");
+  for (i=0;i<g->n;i++)
+    tree[i] = -1;
+  
+  queue_add(q, start);
+  queue_add(q, NULL);
+  tree[v] = v;
+  while (!is_empty_queue(q)) {
+    v = queue_get(q);
+    if (v == NULL)
+    {
+      if (is_empty_queue(q))
+        break;
+      queue_add(q, NULL);
+      continue;
+    }
+    for (i=0;i<g->degrees[v];i++) {
+      u = g->links[v][i];
+      if (tree[u]==-1){
+        queue_add(q,u);
+        tree[u] = v;
+      }
+    }
+  }
+  free_queue(q);
+  free(tree);
+}
+
+/** MOD: 
+ * Steps:
+ * - depth_bfs_tree() gets the farthest points
+ * - Do bfs from these nodes
+ * - Store the bfs somehow (tree or list) (depth list)
+ * - We get a center approximation and a rayon approximation
+ * - (First version TODO) make intersection between lists found
+ */
+void get_center_rayon(graph *g, int start, int *c, int c_giant)
+{
+  int max = -1; // TODO:
+  int *tree = depth_bfs_tree(g, start, &max);
+  if (max == -1)
+    report_error("Probème de calcul de depth");
+  for (int i = 0; i < g->n; i++)
+  {
+    if (tree[i] == max)
+    {
+      fprintf(stderr, "Processing bfs with %d node\n", i);
+      center_rayon(g, i, max, c, c_giant);
+    }
+  }
+  free(tree);
+}
+/** */
 
 
 /* MAIN */
