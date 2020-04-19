@@ -356,7 +356,7 @@ int *depth_bfs_tree(graph *g, int v, int *max)
   q = empty_queue(g->n);
   if( (tree=(int *)malloc(g->n*sizeof(int))) == NULL )
     report_error("bfs_tree: malloc() error");
-  for (i=0;i<g->n;i++)
+  for (i=0;i<g->n;++i)
     tree[i] = -1;
   queue_add(q,v);
   queue_add(q, NULL);
@@ -370,7 +370,7 @@ int *depth_bfs_tree(graph *g, int v, int *max)
       queue_add(q, NULL);
       continue;
     }
-    for (i=0;i<g->degrees[v];i++) {
+    for (i=0;i<g->degrees[v];++i) {
       u = g->links[v][i];
       if (tree[u]==-1){
 	      queue_add(q,u);
@@ -384,44 +384,35 @@ int *depth_bfs_tree(graph *g, int v, int *max)
 
 /** MOD:
  */
-void center_rayon(graph *g, int start, int max_diam, int *c, int c_giant)
+int* center_rayon(graph *g, int start, int *c, int c_giant)
 {
-  int **saved_bfs;
-  int *tree;
-  queue *q;
-  int v = start, u, i;
+  int i = 0;
+  int max = -1;
+  int *depth_tree = depth_bfs_tree(g, start, &max);
+  if (max == -1 || max == 0)
+    report_error("Probème de calcul de depth");
+  // On calcul le milieu, si nombre impaire il va falloir prendre 
+  // deux milieux: middle et middle + 1
+  int middle = max/2;
+  int is_odd = max%2;
+  int counter = 0;
+  int *middle_nodes;
 
-  if  ((saved_bfs = (int**)malloc(max_diam * sizeof(int*))) == NULL)
-    report_error("center_rayon: saved_bfs: malloc() error");
-  q = empty_queue(g->n);
-
-  if( (tree=(int *)malloc(g->n*sizeof(int))) == NULL )
-    report_error("bfs_tree: malloc() error");
-  for (i=0;i<g->n;i++)
-    tree[i] = -1;
-  
-  queue_add(q, start);
-  queue_add(q, NULL);
-  tree[v] = v;
-  while (!is_empty_queue(q)) {
-    v = queue_get(q);
-    if (v == NULL)
-    {
-      if (is_empty_queue(q))
-        break;
-      queue_add(q, NULL);
-      continue;
-    }
-    for (i=0;i<g->degrees[v];i++) {
-      u = g->links[v][i];
-      if (tree[u]==-1){
-        queue_add(q,u);
-        tree[u] = v;
-      }
-    }
+  for (i = 0; i < g->n; ++i)
+  {
+    if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
+      counter++;
   }
-  free_queue(q);
-  free(tree);
+  if ((middle_nodes = (int*) malloc(counter * sizeof(int))) == NULL)
+    report_error("center_rayon: middle_nodes: malloc() error");
+  int j = 0;
+  for (i = 0 ; i < g->n; ++i)
+  {
+    if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
+      middle_nodes[j++] = i;
+  }
+  free(depth_tree);
+  return middle_nodes;
 }
 
 /** MOD: 
@@ -436,14 +427,16 @@ void get_center_rayon(graph *g, int start, int *c, int c_giant)
 {
   int max = -1; // TODO:
   int *tree = depth_bfs_tree(g, start, &max);
+  int *middle_nodes = NULL;
+  int *temp_middle_nodes = NULL;
   if (max == -1)
     report_error("Probème de calcul de depth");
-  for (int i = 0; i < g->n; i++)
+  for (int i = 0; i < g->n; ++i)
   {
     if (tree[i] == max)
     {
       fprintf(stderr, "Processing bfs with %d node\n", i);
-      center_rayon(g, i, max, c, c_giant);
+      temp_middle_nodes = center_rayon(g, i, c, c_giant);
     }
   }
   free(tree);
