@@ -260,6 +260,7 @@ void usage(char *c){
   fprintf(stderr," -prec nb_max precision: compute bounds for the diameter until it is evaluated with a relative error of at most 'precision', or until nb_max iterations have been done.\n");
   fprintf(stderr," -savegiant fpath: saves the giant component to the specified folder.\n"); // MOD: Added this option to save the giant component
   fprintf(stderr," -savegiantbfs fpath: saves the giant component to the specified folder using BFS reordering.\n"); // MOD: Added this option to save the giant component (BFS method)
+  fprintf(stderr," -center: calculate the center of the graph.\n"); // MOD: Added this option to calculate the center (BFS intersection method)
   fprintf(stderr, "\n");
   fprintf(stderr, " -tlb nb: computes trivial lower bounds, from nb randomly chosen nodes.\n");
   fprintf(stderr," -dslb nb: computes double-sweep lower bounds, from nb randomly chosen nodes.\n");
@@ -384,7 +385,7 @@ int *depth_bfs_tree(graph *g, int v, int *max)
 
 /** MOD:
  */
-int* center_rayon(graph *g, int start, int *c, int c_giant)
+int* center_rayon(graph *g, int start, int *resulting_size)
 {
   int i = 0;
   int max = -1;
@@ -398,21 +399,44 @@ int* center_rayon(graph *g, int start, int *c, int c_giant)
   int counter = 0;
   int *middle_nodes;
 
-  for (i = 0; i < g->n; ++i)
-  {
+  for (i = 0; i < g->n; ++i){
     if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
       counter++;
   }
+  if (counter == 0)
+    return NULL;
+  
   if ((middle_nodes = (int*) malloc(counter * sizeof(int))) == NULL)
     report_error("center_rayon: middle_nodes: malloc() error");
   int j = 0;
-  for (i = 0 ; i < g->n; ++i)
-  {
+  for (i = 0 ; i < g->n; ++i){
     if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
       middle_nodes[j++] = i;
   }
+  middle_nodes[j] = -1; // -1 terminated array
+  *resulting_size = j;
   free(depth_tree);
   return middle_nodes;
+}
+
+/** MOD:*/
+int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size)
+{
+  int final_size = size1 > size2 ? size1 : size2;
+  int *new_list;
+  if ((new_list = (int*) malloc(final_size * sizeof(int))) == NULL)
+    report_error("intersections_lists: error malloc()");
+  int k = 0;
+  for (int i = 0; i < size1; ++i){
+    for (int j = 0; j < size2; ++j){
+      if (list1[i] == list2[j]){
+        new_list[k++] = list1[i];
+      }
+    }
+  }
+  new_list[k] = -1;  // -1 terminated array
+  *resulting_size = k;
+  return new_list;
 }
 
 /** MOD: 
@@ -423,23 +447,34 @@ int* center_rayon(graph *g, int start, int *c, int c_giant)
  * - We get a center approximation and a rayon approximation
  * - (First version TODO) make intersection between lists found
  */
-void get_center_rayon(graph *g, int start, int *c, int c_giant)
+int* get_center_rayon(graph *g, int start, int *resulting_size)
 {
   int max = -1; // TODO:
   int *tree = depth_bfs_tree(g, start, &max);
+  int middle_nodes_size = 0;
   int *middle_nodes = NULL;
+  int temp_middle_size = 0;
   int *temp_middle_nodes = NULL;
   if (max == -1)
     report_error("Probème de calcul de depth");
-  for (int i = 0; i < g->n; ++i)
-  {
-    if (tree[i] == max)
-    {
+  for (int i = 0; i < g->n; ++i){
+    if (tree[i] == max){
       fprintf(stderr, "Processing bfs with %d node\n", i);
-      temp_middle_nodes = center_rayon(g, i, c, c_giant);
+      temp_middle_nodes = center_rayon(g, i, &temp_middle_size);
+      if (middle_nodes == NULL)
+      {
+        middle_nodes = temp_middle_nodes;
+        middle_nodes_size = temp_middle_size;
+      }
+      int *inter = intersection_lists(middle_nodes, temp_middle_nodes, 
+      middle_nodes_size, temp_middle_size, &middle_nodes_size);
+      free(middle_nodes);
+      free(temp_middle_nodes);
+      middle_nodes = inter;
     }
   }
   free(tree);
+  return middle_nodes;
 }
 /** */
 
@@ -449,7 +484,8 @@ int main(int argc, char **argv){
   graph *g;
   int i;
   int *sorted_nodes, *dist;
-  int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option, savegiant, savegiantbfs; // MOD
+  int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option, 
+  savegiant, savegiantbfs, center; // MOD
   char *savegiant_path = NULL; // MOD
   int deg_begin=0;
   float precision;
@@ -459,8 +495,8 @@ int main(int argc, char **argv){
   srandom(time(NULL));
 
   /* parse the command line */
-  tlb=0; diam = 0; prec_option=0; dslb=0; tub=0; rtub=0; savegiant = 0, savegiantbfs = 0; // MOD
-  hdtub=0;
+  tlb=0; diam=0; prec_option=0; dslb=0; tub=0; rtub=0;
+  hdtub=0, savegiant=0, savegiantbfs=0, center=0; // MOD
   for (i=1; i<argc; i++){
     if (strcmp(argv[i],"-tlb")==0) {
       tlb = 1;
@@ -479,6 +515,9 @@ int main(int argc, char **argv){
       if( i == argc-1 )
  	usage(argv[0]); 
       savegiant_path = argv[++i];
+    }
+    else if (strcmp(argv[i],"-center")==0) { // MOD: Added option
+      center = 1;
     }
     else if (strcmp(argv[i],"-diam")==0){
       diam = 1;
@@ -522,7 +561,7 @@ int main(int argc, char **argv){
     else
       usage(argv[0]);
   }
-  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant+savegiantbfs != 1){ // MOD
+  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant+savegiantbfs+center != 1){ // MOD
     usage(argv[0]);
   }
   
@@ -583,7 +622,20 @@ int main(int argc, char **argv){
     elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
     printf("Saved in %f seconds\n", elapsed);
   }
-
+  else if (center)
+  {
+    int v = random()%g->n;
+    while (c[v] != c_giant)
+      v = random()%g->n;
+    int *center_nodes;
+    int resulting_size = 0;
+    center_nodes = get_center_rayon(g, v, &resulting_size);
+    for (int i = 0; i < resulting_size; ++i){
+      printf("%d ", center_nodes[i]);
+    }
+    printf("\n");
+    fflush(stdout);
+  }
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */
   else if (diam) {
     int v, upper_step=0, step=0;
