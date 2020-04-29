@@ -351,24 +351,24 @@ void save_giant_bfs(graph *g, int *c, int c_giant, int size_giant, char *path) {
 int *depth_bfs_tree(graph *g, int v, int *max)
 {
   int u, i;
-  int *tree;
+  int *tree = NULL;
   int curr_depth = 0;
   queue *q;
   q = empty_queue(g->n);
-  if( (tree=(int *)malloc(g->n*sizeof(int))) == NULL )
+  if( (tree = (int*)malloc(g->n*sizeof(int))) == NULL )
     report_error("bfs_tree: malloc() error");
   for (i=0;i<g->n;++i)
     tree[i] = -1;
   queue_add(q,v);
-  queue_add(q, NULL);
+  queue_add(q, -1); // -1 special value acts as level seperator
   tree[v] = curr_depth++;
   while (!is_empty_queue(q)) {
     v = queue_get(q);
-    if (v == NULL){
+    if (v == -1){
       if (is_empty_queue(q))
         break;
       curr_depth++;
-      queue_add(q, NULL);
+      queue_add(q, -1);
       continue;
     }
     for (i=0;i<g->degrees[v];++i) {
@@ -379,6 +379,7 @@ int *depth_bfs_tree(graph *g, int v, int *max)
       }
     }
   }
+  *max = curr_depth - 1; // FIXME
   free_queue(q);
   return(tree);
 }
@@ -634,6 +635,7 @@ int main(int argc, char **argv){
       printf("%d ", center_nodes[i]);
     }
     printf("\n");
+    free(center_nodes);
     fflush(stdout);
   }
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */
