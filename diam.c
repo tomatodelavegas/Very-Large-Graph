@@ -354,10 +354,10 @@ int *depth_bfs_tree(graph *g, int v, int *max)
   int *tree = NULL;
   int curr_depth = 0;
   queue *q;
-  q = empty_queue(g->n);
-  if( (tree = (int*)malloc(g->n*sizeof(int))) == NULL )
+  q = empty_queue(g->n + 1);
+  if( (tree = (int*)malloc((g->n + 1) * sizeof(int))) == NULL )
     report_error("bfs_tree: malloc() error");
-  for (i=0;i<g->n;++i)
+  for (i=0;i<g->n + 1;++i) // -1 terminated array
     tree[i] = -1;
   queue_add(q,v);
   queue_add(q, -1); // -1 special value acts as level seperator
@@ -407,7 +407,7 @@ int* center_rayon(graph *g, int start, int *resulting_size)
   if (counter == 0)
     return NULL;
   
-  if ((middle_nodes = (int*) malloc(counter * sizeof(int))) == NULL)
+  if ((middle_nodes = (int*) malloc((counter + 1) * sizeof(int))) == NULL)
     report_error("center_rayon: middle_nodes: malloc() error");
   int j = 0;
   for (i = 0 ; i < g->n; ++i){
@@ -425,7 +425,7 @@ int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resul
 {
   int final_size = size1 > size2 ? size1 : size2;
   int *new_list;
-  if ((new_list = (int*) malloc(final_size * sizeof(int))) == NULL)
+  if ((new_list = (int*) malloc((final_size + 1) * sizeof(int))) == NULL)
     report_error("intersections_lists: error malloc()");
   int k = 0;
   for (int i = 0; i < size1; ++i){
