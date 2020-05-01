@@ -379,7 +379,7 @@ int *depth_bfs_tree(graph *g, int v, int *max)
       }
     }
   }
-  *max = curr_depth - 1; // FIXME
+  *max = curr_depth - 1;
   free_queue(q);
   return(tree);
 }
@@ -450,7 +450,7 @@ int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resul
  */
 int* get_center_rayon(graph *g, int start, int *resulting_size)
 {
-  int max = -1; // TODO:
+  int max = -1;
   int *tree = depth_bfs_tree(g, start, &max);
   int middle_nodes_size = 0;
   int *middle_nodes = NULL;
