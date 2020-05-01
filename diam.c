@@ -470,11 +470,13 @@ int* get_center_rayon(graph *g, int start, int *resulting_size)
       int *inter = intersection_lists(middle_nodes, temp_middle_nodes, 
       middle_nodes_size, temp_middle_size, &middle_nodes_size);
       free(middle_nodes);
-      free(temp_middle_nodes);
+      if (middle_nodes != temp_middle_nodes) // Avoid double free
+        free(temp_middle_nodes);
       middle_nodes = inter;
     }
   }
   free(tree);
+  *resulting_size = middle_nodes_size;
   return middle_nodes;
 }
 /** */
