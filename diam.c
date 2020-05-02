@@ -386,7 +386,6 @@ int *depth_bfs_tree(graph *g, int v, int *max)
 
 /** MOD: Added in order to get the list of vertices located in the middle level(s) of the bfs tree
  * TODO: depth_bfs_tree could return the by level vertices list for quicker computation
- * TODO: Why -1 magix number termination array, this is kinda dirty
  */
 int* compute_central_vertices(graph *g, int start, int *resulting_size)
 {
@@ -420,14 +419,12 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size)
     if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
       middle_nodes[j++] = i;
   }
-  middle_nodes[j] = -1; // -1 terminated array
   *resulting_size = j;
   free(depth_tree);
   return middle_nodes;
 }
 
 /** MOD: Added to compute intersection between two lists
- * TODO: Why -1 magic number termination array, this is kinda dirty
  */
 int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size)
 {
@@ -443,7 +440,6 @@ int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resul
       }
     }
   }
-  new_list[k] = -1;  // -1 terminated array
   *resulting_size = k;
   return new_list;
 }
