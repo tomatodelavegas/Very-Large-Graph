@@ -260,7 +260,7 @@ void usage(char *c){
   fprintf(stderr," -prec nb_max precision: compute bounds for the diameter until it is evaluated with a relative error of at most 'precision', or until nb_max iterations have been done.\n");
   fprintf(stderr," -savegiant fpath: saves the giant component to the specified folder.\n"); // MOD: Added this option to save the giant component
   fprintf(stderr," -savegiantbfs fpath: saves the giant component to the specified folder using BFS reordering.\n"); // MOD: Added this option to save the giant component (BFS method)
-  fprintf(stderr," -center: calculate the center of the graph.\n"); // MOD: Added this option to calculate the center (BFS intersection method)
+  fprintf(stderr," -center: compute the best graph centers candidates.\n"); // MOD: Added this option to compute the center (BFS intersection method)
   fprintf(stderr, "\n");
   fprintf(stderr, " -tlb nb: computes trivial lower bounds, from nb randomly chosen nodes.\n");
   fprintf(stderr," -dslb nb: computes double-sweep lower bounds, from nb randomly chosen nodes.\n");
@@ -384,15 +384,17 @@ int *depth_bfs_tree(graph *g, int v, int *max)
   return(tree);
 }
 
-/** MOD:
+/** MOD: Added in order to get the list of vertices located in the middle level(s) of the bfs tree
+ * TODO: depth_bfs_tree could return the by level vertices list for quicker computation
+ * TODO: Why -1 magix number termination array, this is kinda dirty
  */
-int* center_rayon(graph *g, int start, int *resulting_size)
+int* compute_central_vertices(graph *g, int start, int *resulting_size)
 {
   int i = 0;
   int max = -1;
   int *depth_tree = depth_bfs_tree(g, start, &max);
   if (max == -1 || max == 0)
-    report_error("Probème de calcul de depth");
+    report_error("compute_central_vertices: depth computation error");
   // On calcul le milieu, si nombre impaire il va falloir prendre 
   // deux milieux: middle et middle + 1
   int middle = max/2;
@@ -404,11 +406,15 @@ int* center_rayon(graph *g, int start, int *resulting_size)
     if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
       counter++;
   }
-  if (counter == 0)
+  if (counter == 0) {
+    free(depth_tree);
+    fprintf(stderr, "compute_central_vertices: no middle vertices could be found !"); // ? report_error
+    *resulting_size = 0;
     return NULL;
+  }
   
   if ((middle_nodes = (int*) malloc((counter + 1) * sizeof(int))) == NULL)
-    report_error("center_rayon: middle_nodes: malloc() error");
+    report_error("compute_central_vertices: middle_nodes: malloc() error");
   int j = 0;
   for (i = 0 ; i < g->n; ++i){
     if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
@@ -420,7 +426,9 @@ int* center_rayon(graph *g, int start, int *resulting_size)
   return middle_nodes;
 }
 
-/** MOD:*/
+/** MOD: Added to compute intersection between two lists
+ * TODO: Why -1 magic number termination array, this is kinda dirty
+ */
 int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size)
 {
   int final_size = size1 > size2 ? size1 : size2;
@@ -440,13 +448,15 @@ int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resul
   return new_list;
 }
 
-/** MOD: 
+/** MOD: Added
  * Steps:
  * - depth_bfs_tree() gets the farthest points
  * - Do bfs from these nodes
  * - Store the bfs somehow (tree or list) (depth list)
  * - We get a center approximation and a rayon approximation
  * - (First version TODO) make intersection between lists found
+ * TODO: entire graph loop costs (same with center rayon's comment):
+ * depth_bfs_tree could return the by level vertices list for quicker computation
  */
 int* get_center_rayon(graph *g, int start, int *resulting_size)
 {
@@ -457,11 +467,13 @@ int* get_center_rayon(graph *g, int start, int *resulting_size)
   int temp_middle_size = 0;
   int *temp_middle_nodes = NULL;
   if (max == -1)
-    report_error("Probème de calcul de depth");
+    report_error("get_center_rayon: depth computation error");
   for (int i = 0; i < g->n; ++i){
     if (tree[i] == max){
       fprintf(stderr, "Processing bfs with %d node\n", i);
-      temp_middle_nodes = center_rayon(g, i, &temp_middle_size);
+      temp_middle_nodes = compute_central_vertices(g, i, &temp_middle_size);
+      if (temp_middle_nodes == NULL)
+        continue; // we do not intersect non allocated arrays
       if (middle_nodes == NULL)
       {
         middle_nodes = temp_middle_nodes;
@@ -625,11 +637,18 @@ int main(int argc, char **argv){
     elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
     printf("Saved in %f seconds\n", elapsed);
   }
-  else if (center)
+  else if (center) // MOD: Added
   {
+    /**
+     * TODO: Get rid of randomness in profit of sweeping
+     * TODO: current results heavilly depend on random starting points
+     * TODO: multiple sweep starting from each step "best" bound for the diameter
+     * TODO: maybe take the distribution approach instead of intersection, or hybrid
+     */
     int v = random()%g->n;
     while (c[v] != c_giant)
       v = random()%g->n;
+    // Use loop for small graphs, to avoid randomness: for (int v = 0; v < g->n; ++v) {
     int *center_nodes;
     int resulting_size = 0;
     center_nodes = get_center_rayon(g, v, &resulting_size);
