@@ -70,6 +70,9 @@ int queue_get(queue *q){
 
 /******** DISTANCE functions - begin *********/
 
+/*
+  Resulting tree is links between nodes from bfs process
+*/
 int *bfs_tree(graph *g, int v){
   int u, i;
   int *tree;
@@ -95,7 +98,9 @@ int *bfs_tree(graph *g, int v){
   return(tree);
 }
 
-/* degrees in a tree */
+/* degrees in a tree
+*  Compute degrees according to links between the nodes
+*/
 int *tree_degrees(int *t, int n){
   int i;
   int *r;
@@ -255,6 +260,7 @@ void usage(char *c){
   fprintf(stderr," -prec nb_max precision: compute bounds for the diameter until it is evaluated with a relative error of at most 'precision', or until nb_max iterations have been done.\n");
   fprintf(stderr," -savegiant fpath: saves the giant component to the specified folder.\n"); // MOD: Added this option to save the giant component
   fprintf(stderr," -savegiantbfs fpath: saves the giant component to the specified folder using BFS reordering.\n"); // MOD: Added this option to save the giant component (BFS method)
+  fprintf(stderr," -center: compute the best graph centers candidates.\n"); // MOD: Added this option to compute the center (BFS intersection method)
   fprintf(stderr, "\n");
   fprintf(stderr, " -tlb nb: computes trivial lower bounds, from nb randomly chosen nodes.\n");
   fprintf(stderr," -dslb nb: computes double-sweep lower bounds, from nb randomly chosen nodes.\n");
@@ -340,13 +346,157 @@ void save_giant_bfs(graph *g, int *c, int c_giant, int size_giant, char *path) {
   fclose(f);
 }
 
+/** MOD: Return the depth of each node
+ */
+int *depth_bfs_tree(graph *g, int v, int *max)
+{
+  int u, i;
+  int *tree = NULL;
+  int curr_depth = 0;
+  queue *q;
+  q = empty_queue(g->n + 1);
+  if( (tree = (int*)malloc((g->n + 1) * sizeof(int))) == NULL )
+    report_error("bfs_tree: malloc() error");
+  for (i=0;i<g->n + 1;++i) // -1 terminated array
+    tree[i] = -1;
+  queue_add(q,v);
+  queue_add(q, -1); // -1 special value acts as level seperator
+  tree[v] = curr_depth++;
+  while (!is_empty_queue(q)) {
+    v = queue_get(q);
+    if (v == -1){
+      if (is_empty_queue(q))
+        break;
+      curr_depth++;
+      queue_add(q, -1);
+      continue;
+    }
+    for (i=0;i<g->degrees[v];++i) {
+      u = g->links[v][i];
+      if (tree[u]==-1){
+	      queue_add(q,u);
+	      tree[u] = curr_depth;
+      }
+    }
+  }
+  *max = curr_depth - 1;
+  free_queue(q);
+  return(tree);
+}
+
+/** MOD: Added in order to get the list of vertices located in the middle level(s) of the bfs tree
+ * TODO: depth_bfs_tree could return the by level vertices list for quicker computation
+ */
+int* compute_central_vertices(graph *g, int start, int *resulting_size)
+{
+  int i = 0;
+  int max = -1;
+  int *depth_tree = depth_bfs_tree(g, start, &max);
+  if (max == -1 || max == 0)
+    report_error("compute_central_vertices: depth computation error");
+  // On calcul le milieu, si nombre impaire il va falloir prendre 
+  // deux milieux: middle et middle + 1
+  int middle = max/2;
+  int is_odd = max%2;
+  int counter = 0;
+  int *middle_nodes;
+
+  for (i = 0; i < g->n; ++i){
+    if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
+      counter++;
+  }
+  if (counter == 0) {
+    free(depth_tree);
+    fprintf(stderr, "compute_central_vertices: no middle vertices could be found !"); // ? report_error
+    *resulting_size = 0;
+    return NULL;
+  }
+  
+  if ((middle_nodes = (int*) malloc((counter + 1) * sizeof(int))) == NULL)
+    report_error("compute_central_vertices: middle_nodes: malloc() error");
+  int j = 0;
+  for (i = 0 ; i < g->n; ++i){
+    if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
+      middle_nodes[j++] = i;
+  }
+  *resulting_size = j;
+  free(depth_tree);
+  return middle_nodes;
+}
+
+/** MOD: Added to compute intersection between two lists
+ */
+int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size)
+{
+  int final_size = size1 > size2 ? size1 : size2;
+  int *new_list;
+  if ((new_list = (int*) malloc((final_size + 1) * sizeof(int))) == NULL)
+    report_error("intersections_lists: error malloc()");
+  int k = 0;
+  for (int i = 0; i < size1; ++i){
+    for (int j = 0; j < size2; ++j){
+      if (list1[i] == list2[j]){
+        new_list[k++] = list1[i];
+      }
+    }
+  }
+  *resulting_size = k;
+  return new_list;
+}
+
+/** MOD: Added
+ * Steps:
+ * - depth_bfs_tree() gets the farthest points
+ * - Do bfs from these nodes
+ * - Store the bfs somehow (tree or list) (depth list)
+ * - We get a center approximation and a rayon approximation
+ * - (First version TODO) make intersection between lists found
+ * TODO: entire graph loop costs (same with center rayon's comment):
+ * depth_bfs_tree could return the by level vertices list for quicker computation
+ */
+int* get_center_rayon(graph *g, int start, int *resulting_size)
+{
+  int max = -1;
+  int *tree = depth_bfs_tree(g, start, &max);
+  int middle_nodes_size = 0;
+  int *middle_nodes = NULL;
+  int temp_middle_size = 0;
+  int *temp_middle_nodes = NULL;
+  if (max == -1)
+    report_error("get_center_rayon: depth computation error");
+  for (int i = 0; i < g->n; ++i){
+    if (tree[i] == max){
+      fprintf(stderr, "Processing bfs with %d node\n", i);
+      temp_middle_nodes = compute_central_vertices(g, i, &temp_middle_size);
+      if (temp_middle_nodes == NULL)
+        continue; // we do not intersect non allocated arrays
+      if (middle_nodes == NULL)
+      {
+        middle_nodes = temp_middle_nodes;
+        middle_nodes_size = temp_middle_size;
+      }
+      int *inter = intersection_lists(middle_nodes, temp_middle_nodes, 
+      middle_nodes_size, temp_middle_size, &middle_nodes_size);
+      free(middle_nodes);
+      if (middle_nodes != temp_middle_nodes) // Avoid double free
+        free(temp_middle_nodes);
+      middle_nodes = inter;
+    }
+  }
+  free(tree);
+  *resulting_size = middle_nodes_size;
+  return middle_nodes;
+}
+/** */
+
 
 /* MAIN */
 int main(int argc, char **argv){
   graph *g;
   int i;
   int *sorted_nodes, *dist;
-  int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option, savegiant, savegiantbfs; // MOD
+  int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option, 
+  savegiant, savegiantbfs, center; // MOD
   char *savegiant_path = NULL; // MOD
   int deg_begin=0;
   float precision;
@@ -356,8 +506,8 @@ int main(int argc, char **argv){
   srandom(time(NULL));
 
   /* parse the command line */
-  tlb=0; diam = 0; prec_option=0; dslb=0; tub=0; rtub=0; savegiant = 0, savegiantbfs = 0; // MOD
-  hdtub=0;
+  tlb=0; diam=0; prec_option=0; dslb=0; tub=0; rtub=0;
+  hdtub=0, savegiant=0, savegiantbfs=0, center=0; // MOD
   for (i=1; i<argc; i++){
     if (strcmp(argv[i],"-tlb")==0) {
       tlb = 1;
@@ -376,6 +526,9 @@ int main(int argc, char **argv){
       if( i == argc-1 )
  	usage(argv[0]); 
       savegiant_path = argv[++i];
+    }
+    else if (strcmp(argv[i],"-center")==0) { // MOD: Added option
+      center = 1;
     }
     else if (strcmp(argv[i],"-diam")==0){
       diam = 1;
@@ -419,7 +572,7 @@ int main(int argc, char **argv){
     else
       usage(argv[0]);
   }
-  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant+savegiantbfs != 1){ // MOD
+  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant+savegiantbfs+center != 1){ // MOD
     usage(argv[0]);
   }
   
@@ -480,7 +633,28 @@ int main(int argc, char **argv){
     elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
     printf("Saved in %f seconds\n", elapsed);
   }
-
+  else if (center) // MOD: Added
+  {
+    /**
+     * TODO: Get rid of randomness in profit of sweeping
+     * TODO: current results heavilly depend on random starting points
+     * TODO: multiple sweep starting from each step "best" bound for the diameter
+     * TODO: maybe take the distribution approach instead of intersection, or hybrid
+     */
+    int v = random()%g->n;
+    while (c[v] != c_giant)
+      v = random()%g->n;
+    // Use loop for small graphs, to avoid randomness: for (int v = 0; v < g->n; ++v) {
+    int *center_nodes;
+    int resulting_size = 0;
+    center_nodes = get_center_rayon(g, v, &resulting_size);
+    for (int i = 0; i < resulting_size; ++i){
+      printf("%d ", center_nodes[i]);
+    }
+    printf("\n");
+    free(center_nodes);
+    fflush(stdout);
+  }
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */
   else if (diam) {
     int v, upper_step=0, step=0;
