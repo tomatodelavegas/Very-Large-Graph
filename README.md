@@ -1,7 +1,26 @@
-# Very-Large-Graph
+Very-Large-Graph
+================
 
 This README file describes succintly the program computing
 bounds for the diameter massive graphs.
+
+# About
+
+This Document is the result of academic work at EPITA under **Robert ERRA**, 
+**Alexandre LETOIS** & **Mark ANGOUSTURES**'s supervision (Subject 1).
+
+In this document we describe an approach to compute a 'good' and fast approximation of very large graph's diameter,
+radius & center basing ourselves on previous work and C code: *"Fast Computation of Empirically Tight Bounds for the Diameter of Massive Graphs"* by **Clémence MAGNIEN**, **Matthieu LATAPY** & **Michel HABIB**.
+
+This project is the result of the
+- **Tom MECHINEAU** (tom.mechineau@epita.fr)
+- **Geoffrey BOSSUT** (geoffrey.bossut@epita.fr)
+
+## Modifications
+
+The original code can be spotted directly since it is contained in files prefixed by **"magnien_"**, our code is however prefixed by **"vlg_"**.
+To spot modifications made to the original code, search for **"MOD:"** in the code itself.
+The **"src/diam.c"** file is however a modified version of the original.
 
 # Quickstart
 
