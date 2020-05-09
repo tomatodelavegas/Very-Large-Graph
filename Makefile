@@ -1,11 +1,15 @@
 CC = gcc
-CPPFLAGS = -O3
-CFLAGS =
-DEPS =
-SRC = diam.c
+CFLAGS = -O3 -Iinclude
+CGDBFLAGS = $(CFLAGS) -g
+BIN = diam
+SRCS = $(wildcard src/*.c)
+OBJS = ${SRCS:.c=.o}
 
-diam: $(SRC)
-	$(CC) $(CPPFLAGS) $^ -o $@ $(CFLAGS)
+all:
+	$(CC) $(SRCS) $(CFLAGS) -o $(BIN)
+
+gdb: clean
+	$(CC) $(SRCS) $(CGDBFLAGS) -o $(BIN)
 
 clean:
-	rm -f diam *.o
+	rm -f $(BIN) $(OBJS)
