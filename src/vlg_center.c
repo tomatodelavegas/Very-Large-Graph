@@ -107,6 +107,33 @@ int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resul
     return new_list;
 }
 
+/**
+ * MOD: return random maximum eccentricity node
+ **/
+int random_node_depthtree(int *tree, int size, int max)
+{
+    int counter = 0;
+    for (int i = 0; i < size; ++i)
+    {
+        if (tree[i] == max)
+            counter++;
+    }
+
+    int index_ref = random()%counter;
+    for (int i = 0; i < size; ++i)
+    {
+        if (tree[i] == max)
+        {
+            if (index_ref <= 0)
+                return i;
+            else
+                index_ref--;
+        }
+    }
+    report_error("random_node_depthtree: couldn't find a random index");
+    return -1;
+}
+
 /** MOD: Added
  ** Steps:
  ** - depth_bfs_tree() gets the farthest points
@@ -117,38 +144,42 @@ int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resul
  ** TODO: entire graph loop costs (same with center rayon's comment):
  ** depth_bfs_tree could return the by level vertices list for quicker computation
  **/
-int* get_center_rayon(graph *g, int start, int *resulting_size)
+void calculate_center(graph *g, int start, int num_iterations)
 {
-    int max = -1;
-    int *tree = depth_bfs_tree(g, start, &max);
     int middle_nodes_size = 0;
     int *middle_nodes = NULL;
     int temp_middle_size = 0;
     int *temp_middle_nodes = NULL;
-    if (max == -1)
-        report_error("get_center_rayon: depth computation error");
-    for (int i = 0; i < g->n; ++i){
-        if (tree[i] == max){
-            fprintf(stderr, "Processing bfs with %d node\n", i);
-            temp_middle_nodes = compute_central_vertices(g, i, &temp_middle_size);
-            if (temp_middle_nodes == NULL)
-                continue; // we do not intersect non allocated arrays
-            if (middle_nodes == NULL)
-            {
-                middle_nodes = temp_middle_nodes;
-                middle_nodes_size = temp_middle_size;
-            }
-            int *inter = intersection_lists(middle_nodes, temp_middle_nodes,
-                                            middle_nodes_size, temp_middle_size, &middle_nodes_size);
-            free(middle_nodes);
-            if (middle_nodes != temp_middle_nodes) // Avoid double free
-                free(temp_middle_nodes);
-            middle_nodes = inter;
+    int max = 0;
+
+    fprintf(stderr, "Starting bfs with node %d\n", start);
+    int *tree = depth_bfs_tree(g, start, &max);
+    int *results = NULL;
+    int job_node = 0;
+
+    for (int i = 0; i < num_iterations; ++i)
+    {
+        job_node = random_node_depthtree(tree, g->n, max);
+        fprintf(stderr, "Processing bfs with node %d\n", job_node);
+        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size);
+        if (temp_middle_nodes == NULL)
+            return; // we do not intersect non allocated arrays/ error happened
+        if (middle_nodes == NULL)
+        {
+            middle_nodes = temp_middle_nodes;
+            middle_nodes_size = temp_middle_size;
         }
+        int *inter = intersection_lists(middle_nodes, temp_middle_nodes,
+                                        middle_nodes_size, temp_middle_size, &middle_nodes_size);
+        free(middle_nodes);
+        if (middle_nodes != temp_middle_nodes) // Avoid double free
+            free(temp_middle_nodes);
+        middle_nodes = inter;
+        for (int i = 0; i < middle_nodes_size; ++i)
+            printf("%d ", middle_nodes[i]);
+        printf("\n");
     }
-    free(tree);
-    *resulting_size = middle_nodes_size;
-    return middle_nodes;
+    free(middle_nodes);
 }
 
 /******** GRAPH CENTER functions - end *********/

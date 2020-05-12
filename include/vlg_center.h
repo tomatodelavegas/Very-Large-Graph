@@ -15,7 +15,9 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size);
 
 int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size);
 
-int* get_center_rayon(graph *g, int start, int *resulting_size);
+int random_node_depthtree(int *tree, int size, int max);
+
+void calculate_center(graph *g, int start, int num_iterations);
 
 /******** GRAPH CENTER functions - end *********/
 

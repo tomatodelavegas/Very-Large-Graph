@@ -15,6 +15,7 @@
 
 void usage(char *c){
   fprintf(stderr,"Usage: %s -diam nb_max difference\n",c);
+  fprintf(stderr,"Usage: %s -center\n",c); // MOD: center calculation option
   fprintf(stderr,"Usage: %s -prec nb_max precision\n",c);
   fprintf(stderr,"Usage: %s -tlb|dslb|tub|rtub|hdtub nb [deg_begin]\n",c);
   fprintf(stderr, "\n");
@@ -187,14 +188,7 @@ int main(int argc, char **argv){
     while (c[v] != c_giant)
       v = random()%g->n;
     // Use loop for small graphs, to avoid randomness: for (int v = 0; v < g->n; ++v) {
-    int *center_nodes;
-    int resulting_size = 0;
-    center_nodes = get_center_rayon(g, v, &resulting_size);
-    for (int i = 0; i < resulting_size; ++i){
-      printf("%d ", center_nodes[i]);
-    }
-    printf("\n");
-    free(center_nodes);
+    calculate_center(g, v, 1);
     fflush(stdout);
   }
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */
@@ -361,7 +355,7 @@ int main(int argc, char **argv){
   }
   
   /* cannot be used because of renumbering... */
-  /* free_graph(g); */
+  free_graph(g); // MOD no renumbering so can be used
   free(dist);
   free(c);
   free(c_s);
