@@ -181,7 +181,6 @@ void calculate_center(graph *g, int start, int num_iterations)
             printf("%d ", middle_nodes[i]);
         printf("\n");
     }
-    free(tree);
     free(middle_nodes);
 }
 
