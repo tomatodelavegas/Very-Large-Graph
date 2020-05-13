@@ -50,7 +50,7 @@ int *depth_bfs_tree(graph *g, int v, int *max)
 /** MOD: Added in order to get the list of vertices located in the middle level(s) of the bfs tree
  ** TODO: depth_bfs_tree could return the by level vertices list for quicker computation
  **/
-int* compute_central_vertices(graph *g, int start, int *resulting_size)
+int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node)
 {
     int i = 0;
     int max = -1;
@@ -74,6 +74,7 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size)
         *resulting_size = 0;
         return NULL;
     }
+    *next_node = random_node_depthtree(depth_tree, g->n, max); // next node to use for multisweep
 
     if ((middle_nodes = (int*) malloc((counter + 1) * sizeof(int))) == NULL)
         report_error("compute_central_vertices: middle_nodes: malloc() error");
@@ -146,6 +147,7 @@ int random_node_depthtree(int *tree, int size, int max)
  **/
 void calculate_center(graph *g, int start, int num_iterations)
 {
+    // MultiSweep technique
     int middle_nodes_size = 0;
     int *middle_nodes = NULL;
     int temp_middle_size = 0;
@@ -155,13 +157,13 @@ void calculate_center(graph *g, int start, int num_iterations)
     fprintf(stderr, "Starting bfs with node %d\n", start);
     int *tree = depth_bfs_tree(g, start, &max);
     int *results = NULL;
-    int job_node = 0;
+    int job_node = random_node_depthtree(tree, g->n, max);
+    free(tree); // No need of the first initial depth tree anymore
 
     for (int i = 0; i < num_iterations; ++i)
     {
-        job_node = random_node_depthtree(tree, g->n, max);
         fprintf(stderr, "Processing bfs with node %d\n", job_node);
-        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size);
+        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node);
         if (temp_middle_nodes == NULL)
             return; // we do not intersect non allocated arrays/ error happened
         if (middle_nodes == NULL)
@@ -179,6 +181,7 @@ void calculate_center(graph *g, int start, int num_iterations)
             printf("%d ", middle_nodes[i]);
         printf("\n");
     }
+    free(tree);
     free(middle_nodes);
 }
 

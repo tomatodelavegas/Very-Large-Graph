@@ -15,7 +15,7 @@
 
 void usage(char *c){
   fprintf(stderr,"Usage: %s -diam nb_max difference\n",c);
-  fprintf(stderr,"Usage: %s -center\n",c); // MOD: center calculation option
+  fprintf(stderr,"Usage: %s -center nb_iteration\n",c); // MOD: center calculation option
   fprintf(stderr,"Usage: %s -prec nb_max precision\n",c);
   fprintf(stderr,"Usage: %s -tlb|dslb|tub|rtub|hdtub nb [deg_begin]\n",c);
   fprintf(stderr, "\n");
@@ -44,6 +44,7 @@ int main(int argc, char **argv){
   int deg_begin=0;
   float precision;
   int *c, *c_s, nb_c, c_giant, size_giant;
+  int num_iteration;
 
 
   srandom(time(NULL));
@@ -72,6 +73,9 @@ int main(int argc, char **argv){
     }
     else if (strcmp(argv[i],"-center")==0) { // MOD: Added option
       center = 1;
+      if (i == argc - 1)
+        usage(argv[0]);
+      num_iteration = atoi(argv[++i]);
     }
     else if (strcmp(argv[i],"-diam")==0){
       diam = 1;
@@ -188,7 +192,7 @@ int main(int argc, char **argv){
     while (c[v] != c_giant)
       v = random()%g->n;
     // Use loop for small graphs, to avoid randomness: for (int v = 0; v < g->n; ++v) {
-    calculate_center(g, v, 1);
+    calculate_center(g, v, num_iteration);
     fflush(stdout);
   }
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */
