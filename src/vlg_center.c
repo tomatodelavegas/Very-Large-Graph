@@ -50,7 +50,7 @@ int *depth_bfs_tree(graph *g, int v, int *max)
 /** MOD: Added in order to get the list of vertices located in the middle level(s) of the bfs tree
  ** TODO: depth_bfs_tree could return the by level vertices list for quicker computation
  **/
-int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node)
+int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node, int *diameter)
 {
     int i = 0;
     int max = -1;
@@ -63,6 +63,7 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size, int* nex
     int is_odd = max%2;
     int counter = 0;
     int *middle_nodes;
+    *diameter = max;
 
     for (i = 0; i < g->n; ++i){
         if (depth_tree[i] == middle || (is_odd && depth_tree[i] == middle + 1))
@@ -154,8 +155,15 @@ void calculate_center(graph *g, int start, int num_iterations)
     int *temp_middle_nodes = NULL;
     int max = 0;
 
+    int upper_diam = -1, lower_diam = -1, rayon = -1;
+
     fprintf(stderr, "Starting bfs with node %d\n", start);
     int *tree = depth_bfs_tree(g, start, &max);
+    if (max == -1 || max == 0){
+        report_error("compute_central_vertices: depth computation error");
+        return;
+    }
+
     int *results = NULL;
     int job_node = random_node_depthtree(tree, g->n, max);
     free(tree); // No need of the first initial depth tree anymore
@@ -163,9 +171,17 @@ void calculate_center(graph *g, int start, int num_iterations)
     for (int i = 0; i < num_iterations; ++i)
     {
         fprintf(stderr, "Processing bfs with node %d\n", job_node);
-        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node);
+        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node, &max);
         if (temp_middle_nodes == NULL)
             return; // we do not intersect non allocated arrays/ error happened
+
+        if (max > upper_diam || upper_diam == -1)
+            upper_diam = 2*max; // ecc(u) <= D(G) <= 2ecc(u)
+        if (max < lower_diam || lower_diam == -1)
+            lower_diam = max;
+        if (rayon == -1)
+            rayon = upper_diam / 2;
+            
         if (middle_nodes == NULL)
         {
             middle_nodes = temp_middle_nodes;
@@ -178,9 +194,17 @@ void calculate_center(graph *g, int start, int num_iterations)
             free(temp_middle_nodes);
         middle_nodes = inter;
         for (int i = 0; i < middle_nodes_size; ++i)
-            printf("%d ", middle_nodes[i]);
-        printf("\n");
+            fprintf(stderr, "%d ", middle_nodes[i]);
+        fprintf(stderr, "\n");
+
+        fprintf(stdout, "%dth iteration %d %d %d\n", i, upper_diam, lower_diam, rayon);
     }
+    fprintf(stdout, "Center nodes found:\n");
+    for (int i = 0; i < middle_nodes_size; ++i)
+        fprintf(stdout, "%d ", middle_nodes[i]);
+    fprintf(stdout, "\n");
+    fprintf(stdout, "%d BFS done\n", num_iterations + 1);
+    fprintf(stdout, "Final values: %d %d %d\n", upper_diam, lower_diam, rayon);
     free(middle_nodes);
 }
 
