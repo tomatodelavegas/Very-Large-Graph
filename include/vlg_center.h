@@ -6,6 +6,7 @@
 #define VLG_VLG_CENTER_H
 
 #include "magnien_prelim.h"
+#include "vlg_utils.h"
 
 /******** GRAPH CENTER functions - begin *********/
 

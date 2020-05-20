@@ -13,6 +13,8 @@ int *giant_perm(graph *g, int *c, int size_giant, int c_giant);
 
 int min(int a, int b);
 
+int find_maximum(int *a, int n);
+
 /******** UTILITY functions - end *********/
 
 #endif //VLG_VLG_UTILS_H

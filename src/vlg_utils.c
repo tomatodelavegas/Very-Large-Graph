@@ -31,4 +31,22 @@ int min(int a, int b) {
     return a < b ? a : b;
 }
 
+/** MOD: Max of an array of int */
+int find_maximum(int *a, int n) {
+  int c, max, index;
+ 
+  max = a[0];
+  index = 0;
+ 
+  for (c = 1; c < n; c++) {
+    if (a[c] > max) {
+       index = c;
+       max = a[c];
+    }
+  }
+ 
+  return max;
+}
+
+
 /******** UTILITY functions - end *********/

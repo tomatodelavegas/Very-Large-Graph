@@ -109,23 +109,55 @@ int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resul
     return new_list;
 }
 
+void update_histogram(int* histo, int* middle_nodes, int size)
+{
+    if (histo == NULL || middle_nodes == NULL)
+        return;
+    for (int i = 0; i < size; ++i)
+        histo[middle_nodes[i]]++;
+}
+
+int *ratio_histo(int *histo, int size, int *result_size, float ratio_retention)
+{
+    int max = find_maximum(histo, size);
+    float ratio;
+    int counter = 0;
+    for (int i = 0; i < size; ++i){
+        ratio = (float)histo[i] / (float)max;
+        if (ratio > ratio_retention) // ratio of 80% is nice
+            counter++;
+    }
+
+    int *nodes_result;
+    if ((nodes_result = malloc((counter+1) * sizeof(int))) == NULL){
+        report_error("ratio histo: error malloc nodes_result");
+        return NULL;
+    }
+
+    int hh = 0;
+    for (int i = 0; i < size; ++i){
+        ratio = (float)histo[i] / (float)max;
+        if (ratio > ratio_retention){
+            nodes_result[hh++] = i;
+        }
+    }
+    *result_size = counter;
+    return nodes_result;
+}
 /**
  * MOD: return random maximum eccentricity node
  **/
 int random_node_depthtree(int *tree, int size, int max)
 {
     int counter = 0;
-    for (int i = 0; i < size; ++i)
-    {
+    for (int i = 0; i < size; ++i){
         if (tree[i] == max)
             counter++;
     }
 
     int index_ref = random()%counter;
-    for (int i = 0; i < size; ++i)
-    {
-        if (tree[i] == max)
-        {
+    for (int i = 0; i < size; ++i){
+        if (tree[i] == max){
             if (index_ref <= 0)
                 return i;
             else
@@ -154,8 +186,12 @@ void calculate_center(graph *g, int start, int num_iterations)
     int temp_middle_size = 0;
     int *temp_middle_nodes = NULL;
     int max = 0;
-
-    int upper_diam = -1, lower_diam = -1, rayon = -1;
+    int *histo_center_nodes;
+    if ((histo_center_nodes = calloc(g->n + 1, sizeof(int)))== NULL){
+        report_error("calculate_center: malloc error histo");
+        return;
+    }
+    int upper_diam = -1, lower_diam = 0, rayon = -1;
 
     fprintf(stderr, "Starting bfs with node %d\n", start);
     int *tree = depth_bfs_tree(g, start, &max);
@@ -168,38 +204,25 @@ void calculate_center(graph *g, int start, int num_iterations)
     int job_node = random_node_depthtree(tree, g->n, max);
     free(tree); // No need of the first initial depth tree anymore
 
-    for (int i = 0; i < num_iterations; ++i)
-    {
+    for (int i = 0; i < num_iterations; ++i){
         fprintf(stderr, "Processing bfs with node %d\n", job_node);
         temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node, &max);
         if (temp_middle_nodes == NULL)
-            return; // we do not intersect non allocated arrays/ error happened
+            return; // non allocated array/ error happened
 
         if (max > upper_diam || upper_diam == -1)
             upper_diam = 2*max; // ecc(u) <= D(G) <= 2ecc(u)
-        if (max < lower_diam || lower_diam == -1)
+        else if (max > lower_diam || lower_diam == 0)
             lower_diam = max;
         if (rayon == -1)
             rayon = upper_diam / 2;
-            
-        if (middle_nodes == NULL)
-        {
-            middle_nodes = temp_middle_nodes;
-            middle_nodes_size = temp_middle_size;
-        }
-        int *inter = intersection_lists(middle_nodes, temp_middle_nodes,
-                                        middle_nodes_size, temp_middle_size, &middle_nodes_size);
-        free(middle_nodes);
-        if (middle_nodes != temp_middle_nodes) // Avoid double free
-            free(temp_middle_nodes);
-        middle_nodes = inter;
-        for (int i = 0; i < middle_nodes_size; ++i)
-            fprintf(stderr, "%d ", middle_nodes[i]);
-        fprintf(stderr, "\n");
-
+        
+        update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
+        free(temp_middle_nodes);
         fprintf(stdout, "%dth iteration %d %d %d\n", i, upper_diam, lower_diam, rayon);
     }
     fprintf(stdout, "Center nodes found:\n");
+    middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 0.8); // FIXME: remove hardcoded
     for (int i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
     fprintf(stdout, "\n");
