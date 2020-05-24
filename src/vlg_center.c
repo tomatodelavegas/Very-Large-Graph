@@ -168,7 +168,7 @@ int random_node_depthtree(int *tree, int size, int max)
     return -1;
 }
 
-int get_multisweep_node(graph *g, int start)
+int get_multisweep_node(graph *g, int start, int *max_ecc)
 {
     int max = 0;
     int *tree = depth_bfs_tree(g, start, &max);
@@ -178,6 +178,7 @@ int get_multisweep_node(graph *g, int start)
     }
     int job_node = random_node_depthtree(tree, g->n, max);
     free(tree); // No need of the first initial depth tree anymore
+    *max_ecc = max;
     return job_node;
 }
 
@@ -199,13 +200,13 @@ void calculate_center(graph *g, int start, int num_iterations)
     int *middle_nodes = NULL;
     int temp_middle_size = 0;
     int *temp_middle_nodes = NULL;
-    int max = 0;
+    int max_dist = 0;
     int *histo_center_nodes;
     if ((histo_center_nodes = calloc(g->n + 1, sizeof(int)))== NULL){
         report_error("calculate_center: malloc error histo");
         return;
     }
-    int upper_diam = -1, lower_diam = 0, rayon = -1;
+    int upper_diam = -1, upper_val_diam = -1, lower_diam = -1, rayon = -1;
 
     fprintf(stderr, "Starting bfs with node %d\n", start);
     int *multisweep_check;
@@ -216,29 +217,38 @@ void calculate_center(graph *g, int start, int num_iterations)
     int counter_limit = 100; // FIXME use a parameter instead
 
     int *results = NULL;
-    int job_node = get_multisweep_node(g, start);
+    int job_node = get_multisweep_node(g, start, &max_dist);
+    upper_val_diam = max_dist;
+    lower_diam = max_dist;
+
     if (job_node == -1){ // error case
         report_error("calculate_center: get_multisweep_node: error finding node");
         return;
     }
 
+    printf("#1:i=iteration_number #2:best_lower_diam_bound #3:best_upper_diam_bound #4:best_rayon\n");
     for (int i = 0; i < num_iterations; ++i){
         fprintf(stderr, "Processing bfs with node %d\n", job_node);
         multisweep_check[job_node] = 1; // set to already done
-        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node, &max);
+        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node, &max_dist);
         if (temp_middle_nodes == NULL)
             return; // non allocated array/ error happened
 
+/*
         if (max > upper_diam || upper_diam == -1)
             upper_diam = 2*max; // ecc(u) <= D(G) <= 2ecc(u)
         else if (max > lower_diam || lower_diam == 0)
             lower_diam = max;
-        if (rayon == -1)
-            rayon = upper_diam / 2;
-        
+*/
+
+        lower_diam = max(lower_diam, max_dist);
+        upper_val_diam = min(upper_val_diam, max_dist);
+        upper_diam = 2*min(upper_val_diam, max_dist);
+        rayon = upper_diam;
+
         update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
         free(temp_middle_nodes);
-        fprintf(stdout, "%dth iteration %d %d %d\n", i, upper_diam, lower_diam, rayon);
+        fprintf(stdout, "%dth iteration %d %d %d\n", i, lower_diam, upper_diam, rayon);
 
         // check if node has already been used, if so, pick a new node
         copy_node = job_node;
@@ -251,7 +261,7 @@ void calculate_center(graph *g, int start, int num_iterations)
             }
         }
         if (copy_node != job_node){ // check if loop changed the current node, if so, bfs needed
-            job_node = get_multisweep_node(g, job_node);
+            job_node = get_multisweep_node(g, job_node, &max_dist);
             if (job_node == -1){ // error case
                 report_error("calculate_center: get_multisweep_node: error finding node");
                 return;
