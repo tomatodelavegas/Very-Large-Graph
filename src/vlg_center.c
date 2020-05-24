@@ -206,7 +206,8 @@ void calculate_center(graph *g, int start, int num_iterations)
         report_error("calculate_center: malloc error histo");
         return;
     }
-    int upper_diam = -1, upper_val_diam = -1, lower_diam = -1, rayon = -1;
+    int upper_diam, lower_diam, rayon;
+    float cur_rayon_approx;
 
     fprintf(stderr, "Starting bfs with node %d\n", start);
     int *multisweep_check;
@@ -218,7 +219,7 @@ void calculate_center(graph *g, int start, int num_iterations)
 
     int *results = NULL;
     int job_node = get_multisweep_node(g, start, &max_dist);
-    upper_val_diam = max_dist;
+    cur_rayon_approx = max_dist; // this is a not diametral vertice we do not /= 2
     lower_diam = max_dist;
 
     if (job_node == -1){ // error case
@@ -226,8 +227,9 @@ void calculate_center(graph *g, int start, int num_iterations)
         return;
     }
 
-    printf("#1:i=iteration_number #2:best_lower_diam_bound #3:best_upper_diam_bound #4:best_rayon\n");
-    for (int i = 0; i < num_iterations; ++i){
+    printf("#1:i=iteration_number #2:best_lower_diam_bound #3:best_upper_diam_bound #4:best_rayon #5:current_bfs_rayon_approx\n");
+    for (int i = 0; i < num_iterations; ++i) {
+        // !!! FIXME: some nodes aren't diametral
         fprintf(stderr, "Processing bfs with node %d\n", job_node);
         multisweep_check[job_node] = 1; // set to already done
         temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node, &max_dist);
@@ -242,13 +244,29 @@ void calculate_center(graph *g, int start, int num_iterations)
 */
 
         lower_diam = max(lower_diam, max_dist);
-        upper_val_diam = min(upper_val_diam, max_dist);
-        upper_diam = 2*min(upper_val_diam, max_dist);
-        rayon = upper_diam;
+        // a la toute fin on fait un BFS à partir
+        // we do not compute a BFS from this iteration since it is costly
+        // an approximation is current BFS rayon:
+        // !!! FIXME division avec reste -> cur_rayon_approx est float pour fix
+        cur_rayon_approx = min(cur_rayon_approx, max_dist/2);
+        // on stocke dans cur_rayon_approx le rayon du BFS courant
+        
+        // TODO: paramètre pour une meilleure approximation du rayon
+        // (attention *2 plus de BFS)
+        // maybe add a parameter, parcours des nouveaux centres pour
+        // maj de la variable contenant le meilleur centre (nouvelle variable),
+        // pour ensuite effectuer un BFS a partir de celui ci
+
+        // upper_diam = min(upper_diam, 2ecc(x))
+        // !!! TODO: better upper bound approximation inspiring ourselves from -diam
+        upper_diam = 4*cur_rayon_approx;
+        rayon = (upper_diam + lower_diam) / 2;
+        // use at the end cur_rayon_approx to provide maybe a better approximation of the rayon ?
+        rayon = min(rayon, cur_rayon_approx); // (diametral node eccentricity)/2 can be a better rayon
 
         update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
         free(temp_middle_nodes);
-        fprintf(stdout, "%dth iteration %d %d %d\n", i, lower_diam, upper_diam, rayon);
+        fprintf(stdout, "%dth iteration %d %d %d %0.2f\n", i, lower_diam, upper_diam, rayon, cur_rayon_approx);
 
         // check if node has already been used, if so, pick a new node
         copy_node = job_node;
@@ -275,7 +293,7 @@ void calculate_center(graph *g, int start, int num_iterations)
         fprintf(stdout, "%d ", middle_nodes[i]);
     fprintf(stdout, "\n");
     fprintf(stdout, "%d BFS done\n", num_iterations + 1);
-    fprintf(stdout, "Final values: %d %d %d\n", upper_diam, lower_diam, rayon);
+    fprintf(stdout, "Final values: %d %d %d\n", lower_diam, upper_diam, rayon);
     free(middle_nodes);
     free(multisweep_check);
 }
