@@ -7,13 +7,14 @@
 
 #include "magnien_prelim.h"
 #include "magnien_utils.h"
+#include "magnien_distances.h"
 #include "vlg_utils.h"
 
 /******** GRAPH CENTER functions - begin *********/
 
-int *depth_bfs_tree(graph *g, int v, int *max);
+int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree);
 
-int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node, int *diameter);
+int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node, int *diameter, int *diam_upper);
 
 int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size);
 

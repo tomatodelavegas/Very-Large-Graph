@@ -10,21 +10,29 @@
 
 /** MOD: ADDED
  ** Return the depth of each node
+ ** And compute magnien tree at the same time
+ ** magnien_tree: node links with bfs computation
  **/
-int *depth_bfs_tree(graph *g, int v, int *max)
+int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree)
 {
     int u, i;
-    int *tree = NULL;
+    int *depth_tree; // depth tree
+    int *tree; // magnien tree
     int curr_depth = 0;
     queue *q;
     q = empty_queue(g->n + 1);
-    if( (tree = (int*)malloc((g->n + 1) * sizeof(int))) == NULL )
+    if( (depth_tree = (int*)malloc((g->n + 1) * sizeof(int))) == NULL )
         report_error("bfs_tree: malloc() error");
-    for (i=0;i<g->n + 1;++i) // -1 terminated array
+    if( (tree=(int *)malloc(g->n*sizeof(int))) == NULL )
+        report_error("bfs_tree: malloc() error");
+    for (i=0;i<g->n;++i){
+        depth_tree[i] = -1;
         tree[i] = -1;
+    }
     queue_add(q,v);
     queue_add(q, -1); // -1 special value acts as level seperator
-    tree[v] = curr_depth++;
+    depth_tree[v] = curr_depth++;
+    tree[v] = v;
     while (!is_empty_queue(q)) {
         v = queue_get(q);
         if (v == -1){
@@ -36,25 +44,32 @@ int *depth_bfs_tree(graph *g, int v, int *max)
         }
         for (i=0;i<g->degrees[v];++i) {
             u = g->links[v][i];
-            if (tree[u]==-1){
+            if (depth_tree[u]==-1){
                 queue_add(q,u);
-                tree[u] = curr_depth;
+                depth_tree[u] = curr_depth;
+                tree[u] = v;
             }
         }
     }
     *max = curr_depth - 1;
     free_queue(q);
-    return(tree);
+
+    if (magnien_tree != NULL)
+        *magnien_tree = tree;
+    else
+        free(tree);
+    return(depth_tree);
 }
 
 /** MOD: Added in order to get the list of vertices located in the middle level(s) of the bfs tree
  ** TODO: depth_bfs_tree could return the by level vertices list for quicker computation
  **/
-int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node, int *diameter)
+int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node, int *diameter, int *diam_upper)
 {
     int i = 0;
     int max = -1;
-    int *depth_tree = depth_bfs_tree(g, start, &max);
+    int *magnien_tree = NULL;
+    int *depth_tree = depth_bfs_tree(g, start, &max, &magnien_tree);
     if (max == -1 || max == 0)
         report_error("compute_central_vertices: depth computation error");
     // On calcul le milieu, si nombre impaire il va falloir prendre
@@ -76,6 +91,8 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size, int* nex
         return NULL;
     }
     *next_node = random_node_depthtree(depth_tree, g->n, max); // next node to use for multisweep
+    *diam_upper = tree_max_dist(magnien_tree, g->n);
+    free(magnien_tree);
 
     if ((middle_nodes = (int*) malloc((counter + 1) * sizeof(int))) == NULL)
         report_error("compute_central_vertices: middle_nodes: malloc() error");
@@ -171,7 +188,7 @@ int random_node_depthtree(int *tree, int size, int max)
 int get_multisweep_node(graph *g, int start, int *max_ecc)
 {
     int max = 0;
-    int *tree = depth_bfs_tree(g, start, &max);
+    int *tree = depth_bfs_tree(g, start, &max, NULL);
     if (max == -1 || max == 0){
         report_error("get_multisweep_node: depth computation error");
         return -1;
@@ -206,7 +223,8 @@ void calculate_center(graph *g, int start, int num_iterations)
         report_error("calculate_center: malloc error histo");
         return;
     }
-    int upper_diam, lower_diam, rayon;
+    int upper_diam = -1, lower_diam, rayon;
+    int temp_upper_diam = 0;
     float cur_rayon_approx;
 
     fprintf(stderr, "Starting bfs with node %d\n", start);
@@ -232,7 +250,7 @@ void calculate_center(graph *g, int start, int num_iterations)
         // !!! FIXME: some nodes aren't diametral
         fprintf(stderr, "Processing bfs with node %d\n", job_node);
         multisweep_check[job_node] = 1; // set to already done
-        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node, &max_dist);
+        temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node, &max_dist, &temp_upper_diam);
         if (temp_middle_nodes == NULL)
             return; // non allocated array/ error happened
 
@@ -259,8 +277,12 @@ void calculate_center(graph *g, int start, int num_iterations)
 
         // upper_diam = min(upper_diam, 2ecc(x))
         // !!! TODO: better upper bound approximation inspiring ourselves from -diam
-        upper_diam = 4*cur_rayon_approx;
-        rayon = (upper_diam + lower_diam) / 2;
+        // upper_diam = 4*cur_rayon_approx; // previous upper diam computation
+        if (upper_diam == -1)
+            upper_diam = temp_upper_diam;
+        if (temp_upper_diam < upper_diam)
+            upper_diam = temp_upper_diam;
+        rayon = (upper_diam + lower_diam) / 4; // FIXME? divison by 4
         // use at the end cur_rayon_approx to provide maybe a better approximation of the rayon ?
         rayon = min(rayon, cur_rayon_approx); // (diametral node eccentricity)/2 can be a better rayon
 
