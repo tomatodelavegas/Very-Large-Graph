@@ -282,7 +282,8 @@ void calculate_center(graph *g, int start, int num_iterations)
             upper_diam = temp_upper_diam;
         if (temp_upper_diam < upper_diam)
             upper_diam = temp_upper_diam;
-        rayon = (upper_diam + lower_diam) / 4; // FIXME? divison by 4
+        // taking the min, since slight chance cur_rayon_approx will be better
+        rayon = min(rayon,(upper_diam + lower_diam) / 4); // FIXME? divison by 4
         // use at the end cur_rayon_approx to provide maybe a better approximation of the rayon ?
         rayon = min(rayon, cur_rayon_approx); // (diametral node eccentricity)/2 can be a better rayon
 
