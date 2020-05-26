@@ -246,8 +246,16 @@ int random_node_depthtree(int *tree, int size, int max)
  ** - Store the bfs somehow (tree or list) (depth list)
  ** - We get a center approximation and a rayon approximation
  ** - (First version TODO) make intersection between lists found
- ** TODO: entire graph loop costs (same with center rayon's comment):
- ** depth_bfs_tree could return the by level vertices list for quicker computation
+ ** TODO:
+ ** - entire graph loop costs (same with center rayon's comment):
+ ** - depth_bfs_tree could return the by level vertices list for quicker computation
+ ** - paramètre pour une meilleure approximation du rayon
+ **        (attention *2 plus de BFS)
+ **        maybe add a parameter, parcours des nouveaux centres pour
+ **        maj de la variable contenant le meilleur centre (nouvelle variable),
+ **        pour ensuite effectuer un BFS a partir de celui ci
+ ** - meilleure approximation du rayon grâce a un BFS
+ **        sur le plus centre le probable
  **/
 void calculate_center(graph *g, int start, int num_iterations)
 {
@@ -287,7 +295,6 @@ void calculate_center(graph *g, int start, int num_iterations)
 
     printf("#1:i=iteration_number #2:best_lower_diam_bound #3:best_upper_diam_bound #4:best_rayon #5:current_bfs_rayon_approx\n");
     for (int i = 0; i < num_iterations; ++i) {
-        // !!! FIXME: some nodes aren't diametral
         fprintf(stderr, "Processing bfs with node %d\n", job_node);
         multisweep_check[job_node] = 1; // set to already done
         temp_middle_nodes = compute_central_vertices(g, job_node, &temp_middle_size, &job_node, &max_dist, &temp_upper_diam);
@@ -295,26 +302,14 @@ void calculate_center(graph *g, int start, int num_iterations)
             return; // non allocated array/ error happened
 
         lower_diam = max(lower_diam, max_dist);
-        // a la toute fin on fait un BFS à partir
-        // we do not compute a BFS from this iteration since it is costly
-        // an approximation is current BFS rayon:
-        // !!! FIXME division avec reste -> cur_rayon_approx est float pour fix
-        cur_rayon_approx = min(cur_rayon_approx, max_dist/2);
-        // on stocke dans cur_rayon_approx le rayon du BFS courant
-        
-        // TODO: paramètre pour une meilleure approximation du rayon
-        // (attention *2 plus de BFS)
-        // maybe add a parameter, parcours des nouveaux centres pour
-        // maj de la variable contenant le meilleur centre (nouvelle variable),
-        // pour ensuite effectuer un BFS a partir de celui ci
+        cur_rayon_approx = min(cur_rayon_approx, max_dist/2); // this is an approximation is current middle node BFS rayon
 
         if (upper_diam == -1)
             upper_diam = temp_upper_diam;
         if (temp_upper_diam < upper_diam)
             upper_diam = temp_upper_diam;
         // taking the min, since slight chance cur_rayon_approx will be better
-        rayon = min(rayon,(upper_diam + lower_diam) / 4); // FIXME? divison by 4
-        // use at the end cur_rayon_approx to provide maybe a better approximation of the rayon ?
+        rayon = min(rayon,(upper_diam + lower_diam) / 4);
         rayon = min(rayon, cur_rayon_approx); // (diametral node eccentricity)/2 can be a better rayon
 
         update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
