@@ -192,7 +192,7 @@ int main(int argc, char **argv){
     while (c[v] != c_giant)
       v = random()%g->n;
     // Use loop for small graphs, to avoid randomness: for (int v = 0; v < g->n; ++v) {
-    calculate_center(g, v, num_iteration);
+    calculate_center(g, v, num_iteration, c, c_giant);
     fflush(stdout);
   }
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */

@@ -18,7 +18,7 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size, int* nex
 
 int random_node_depthtree(int *tree, int size, int max);
 
-void calculate_center(graph *g, int start, int num_iterations);
+void calculate_center(graph *g, int start, int num_iterations, int* c, int c_giant);
 
 /******** GRAPH CENTER functions - end *********/
 

@@ -257,7 +257,7 @@ int random_node_depthtree(int *tree, int size, int max)
  ** - meilleure approximation du rayon grâce a un BFS
  **        sur le plus centre le probable
  **/
-void calculate_center(graph *g, int start, int num_iterations)
+void calculate_center(graph *g, int start, int num_iterations, int* c, int c_giant)
 {
     // MultiSweep technique
     int copy_node = 0;
@@ -320,6 +320,10 @@ void calculate_center(graph *g, int start, int num_iterations)
         copy_node = job_node;
         while (multisweep_check[job_node]){
             job_node = random()%g->n;
+            while (c[job_node] != c_giant) {
+                fprintf(stderr, "Wrong component %d for random node %d \n", c[job_node], job_node);
+	            job_node = random()%g->n;
+            }
             counter_tries++;
             if (counter_tries >= counter_limit){
                 memset(multisweep_check, 0, g->n * sizeof(*multisweep_check)); // reset on too many iterations
