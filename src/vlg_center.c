@@ -8,6 +8,51 @@
 
 /******** GRAPH CENTER functions - begin *********/
 
+/******** begin statics ********/
+
+/**
+ ** get_multisweep_node: returns a random maximum tree level BFS node
+ ** (wrapper for calling depth_bfs_tree then random_node_depthtree)
+ ** 
+ ** graph *g:       the graph itself
+ ** int start:      the starting vertice to perform the BFS from
+ ** int *max_ecc:   the vertice eccentricity value
+ **
+ ** returns int:    a random maximum tree level BFS node
+ **/
+static inline int get_multisweep_node(graph *g, int start, int *max_ecc)
+{
+    int max = 0;
+    int *tree = depth_bfs_tree(g, start, &max, NULL);
+    if (max == -1 || max == 0){
+        report_error("get_multisweep_node: depth computation error");
+        return -1;
+    }
+    int job_node = random_node_depthtree(tree, g->n, max);
+    free(tree); // No need of the first initial depth tree anymore
+    *max_ecc = max;
+    return job_node;
+}
+
+/**
+ ** get_vertice_eccentricity: returns the vertice eccentricity (costs 1 BFS)
+ **
+ ** graph *g:       the graph itself
+ ** int start:      the starting vertice to perform the BFS from
+ ** 
+ ** returns int:    the given vertice eccentricity
+ **/
+static inline int get_vertice_eccentricity(graph *g, int start) {
+    int max;
+    int *depth_tree = depth_bfs_tree(g, start, &max, NULL);
+    if (max == -1 || max == 0)
+        report_error("get_eccentricity: depth computation error");
+    free(depth_tree);
+    return max;
+}
+
+/******** end statics ********/
+
 /** MOD: ADDED
  ** Return the depth of each node
  ** And compute magnien tree at the same time
@@ -106,26 +151,16 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size, int* nex
     return middle_nodes;
 }
 
-/** MOD: Added to compute intersection between two lists
+/**
+ ** update_histogram: updates the middle nodes histogram with 
+ ** the given new middle nodes list
+ **
+ ** int* histo:         the histogram
+ ** int* middle_nodes:  the middle nodes list
+ ** int size:           the size of the middle nodes list
+ ** 
+ ** returns void
  **/
-int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size)
-{
-    int final_size = size1 > size2 ? size1 : size2;
-    int *new_list;
-    if ((new_list = (int*) malloc((final_size + 1) * sizeof(int))) == NULL)
-        report_error("intersections_lists: error malloc()");
-    int k = 0;
-    for (int i = 0; i < size1; ++i){
-        for (int j = 0; j < size2; ++j){
-            if (list1[i] == list2[j]){
-                new_list[k++] = list1[i];
-            }
-        }
-    }
-    *resulting_size = k;
-    return new_list;
-}
-
 void update_histogram(int* histo, int* middle_nodes, int size)
 {
     if (histo == NULL || middle_nodes == NULL)
@@ -134,6 +169,17 @@ void update_histogram(int* histo, int* middle_nodes, int size)
         histo[middle_nodes[i]]++;
 }
 
+/**
+ ** ratio_histo: returns nodes in the middle nodes histogram
+ ** that have a frequency higher than the given ratio
+ **
+ ** int* histo:             the middle nodes histogram
+ ** int size:               the size of the histogram
+ ** int *result_size:       the number of higher middle nodes returned
+ ** float ratio_retention:  the ratio determining higher frequency nodes
+ **
+ ** returns int*: the list of higher frequency middle nodes from histo
+ **/
 int *ratio_histo(int *histo, int size, int *result_size, float ratio_retention)
 {
     int max = find_maximum(histo, size);
@@ -141,7 +187,7 @@ int *ratio_histo(int *histo, int size, int *result_size, float ratio_retention)
     int counter = 0;
     for (int i = 0; i < size; ++i){
         ratio = (float)histo[i] / (float)max;
-        if (ratio > ratio_retention) // ratio of 80% is nice
+        if (ratio >= ratio_retention) // ratio >= 80% is nice
             counter++;
     }
 
@@ -154,27 +200,35 @@ int *ratio_histo(int *histo, int size, int *result_size, float ratio_retention)
     int hh = 0;
     for (int i = 0; i < size; ++i){
         ratio = (float)histo[i] / (float)max;
-        if (ratio > ratio_retention){
+        if (ratio >= ratio_retention){
             nodes_result[hh++] = i;
         }
     }
     *result_size = counter;
     return nodes_result;
 }
+
 /**
- * MOD: return random maximum eccentricity node
+ ** random_node_depthtree: return random maximum eccentricity node from
+ ** a BFS level tree array (each value is the level in the BFS tree)
+ **
+ ** int *tree:  the BFS level tree array
+ ** int size:   the size of the BFS level tree array
+ ** int max:    the maximum BFS level
+ **
+ ** returns int: a random last BFS tree level node
  **/
 int random_node_depthtree(int *tree, int size, int max)
 {
     int counter = 0;
-    for (int i = 0; i < size; ++i){
+    for (int i = 0; i < size; ++i) {
         if (tree[i] == max)
             counter++;
     }
 
     int index_ref = random()%counter;
-    for (int i = 0; i < size; ++i){
-        if (tree[i] == max){
+    for (int i = 0; i < size; ++i) {
+        if (tree[i] == max) {
             if (index_ref <= 0)
                 return i;
             else
@@ -183,20 +237,6 @@ int random_node_depthtree(int *tree, int size, int max)
     }
     report_error("random_node_depthtree: couldn't find a random index");
     return -1;
-}
-
-int get_multisweep_node(graph *g, int start, int *max_ecc)
-{
-    int max = 0;
-    int *tree = depth_bfs_tree(g, start, &max, NULL);
-    if (max == -1 || max == 0){
-        report_error("get_multisweep_node: depth computation error");
-        return -1;
-    }
-    int job_node = random_node_depthtree(tree, g->n, max);
-    free(tree); // No need of the first initial depth tree anymore
-    *max_ecc = max;
-    return job_node;
 }
 
 /** MOD: Added
@@ -254,13 +294,6 @@ void calculate_center(graph *g, int start, int num_iterations)
         if (temp_middle_nodes == NULL)
             return; // non allocated array/ error happened
 
-/*
-        if (max > upper_diam || upper_diam == -1)
-            upper_diam = 2*max; // ecc(u) <= D(G) <= 2ecc(u)
-        else if (max > lower_diam || lower_diam == 0)
-            lower_diam = max;
-*/
-
         lower_diam = max(lower_diam, max_dist);
         // a la toute fin on fait un BFS à partir
         // we do not compute a BFS from this iteration since it is costly
@@ -275,9 +308,6 @@ void calculate_center(graph *g, int start, int num_iterations)
         // maj de la variable contenant le meilleur centre (nouvelle variable),
         // pour ensuite effectuer un BFS a partir de celui ci
 
-        // upper_diam = min(upper_diam, 2ecc(x))
-        // !!! TODO: better upper bound approximation inspiring ourselves from -diam
-        // upper_diam = 4*cur_rayon_approx; // previous upper diam computation
         if (upper_diam == -1)
             upper_diam = temp_upper_diam;
         if (temp_upper_diam < upper_diam)
@@ -311,7 +341,7 @@ void calculate_center(graph *g, int start, int num_iterations)
 
     }
     fprintf(stdout, "Center nodes found:\n");
-    middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 0.8); // FIXME: remove hardcoded and use parameter
+    middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1); // FIXME: remove hardcoded and use parameter
     for (int i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
     fprintf(stdout, "\n");

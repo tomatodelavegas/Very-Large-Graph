@@ -48,5 +48,33 @@ int find_maximum(int *a, int n) {
   return max;
 }
 
+/**
+ ** intersection_lists: compute intersection between two lists
+ ** 
+ ** int *list1:             the first list
+ ** int *list2:             the second list
+ ** int size1:              the first list length
+ ** int size2:              the second list length
+ ** int *resulting_size:    the resulting intersected list length
+ **
+ ** returns int*:           list1 ∩ list2
+ **/
+int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size)
+{
+    int final_size = size1 > size2 ? size1 : size2;
+    int *new_list;
+    if ((new_list = (int*) malloc((final_size + 1) * sizeof(int))) == NULL)
+        report_error("intersections_lists: error malloc()");
+    int k = 0;
+    for (int i = 0; i < size1; ++i){
+        for (int j = 0; j < size2; ++j){
+            if (list1[i] == list2[j]){
+                new_list[k++] = list1[i];
+            }
+        }
+    }
+    *resulting_size = k;
+    return new_list;
+}
 
 /******** UTILITY functions - end *********/

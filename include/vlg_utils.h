@@ -15,6 +15,8 @@ int min(int a, int b);
 
 int find_maximum(int *a, int n);
 
+int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size);
+
 /******** UTILITY functions - end *********/
 
 #endif //VLG_VLG_UTILS_H
