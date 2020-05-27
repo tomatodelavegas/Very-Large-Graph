@@ -359,7 +359,8 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
         job_node = get_multisweep_node(g, copy_node, &max_dist); // one random diametral node from middle
         rayon = max_dist; // :'(
         lower_diam = max(lower_diam, get_vertice_eccentricity(g, job_node));
-        fprintf(stdout, "\nmost probable central nodes %d BFS to %d, computing BFS", copy_node, job_node);
+        fprintf(stdout, "\nProbable central node is %d", copy_node);
+        fprintf(stdout, "\nMultiple BFS yielded %d as a diametral node", job_node);
         fprintf(stdout, "\ncentral BFS %dth iteration %d %d %d", num_iterations, lower_diam, upper_diam, rayon);
     }
     fprintf(stdout, "\n");
