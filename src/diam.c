@@ -15,6 +15,7 @@
 
 void usage(char *c){
   fprintf(stderr,"Usage: %s -diam nb_max difference\n",c);
+  fprintf(stderr,"Usage: %s -center nb_iteration\n",c); // MOD: center calculation option
   fprintf(stderr,"Usage: %s -prec nb_max precision\n",c);
   fprintf(stderr,"Usage: %s -tlb|dslb|tub|rtub|hdtub nb [deg_begin]\n",c);
   fprintf(stderr, "\n");
@@ -43,6 +44,7 @@ int main(int argc, char **argv){
   int deg_begin=0;
   float precision;
   int *c, *c_s, nb_c, c_giant, size_giant;
+  int num_iteration;
 
 
   srandom(time(NULL));
@@ -71,6 +73,9 @@ int main(int argc, char **argv){
     }
     else if (strcmp(argv[i],"-center")==0) { // MOD: Added option
       center = 1;
+      if (i == argc - 1)
+        usage(argv[0]);
+      num_iteration = atoi(argv[++i]);
     }
     else if (strcmp(argv[i],"-diam")==0){
       diam = 1;
@@ -183,19 +188,19 @@ int main(int argc, char **argv){
      * TODO: multiple sweep starting from each step "best" bound for the diameter
      * TODO: maybe take the distribution approach instead of intersection, or hybrid
      */
+    clock_t begin, end;
+    double elapsed;
+    printf("%s\n", "Computing graph center approximation (alongside rayon and diameter)...");
+    begin = clock();
     int v = random()%g->n;
     while (c[v] != c_giant)
       v = random()%g->n;
     // Use loop for small graphs, to avoid randomness: for (int v = 0; v < g->n; ++v) {
-    int *center_nodes;
-    int resulting_size = 0;
-    center_nodes = get_center_rayon(g, v, &resulting_size);
-    for (int i = 0; i < resulting_size; ++i){
-      printf("%d ", center_nodes[i]);
-    }
-    printf("\n");
-    free(center_nodes);
+    calculate_center(g, v, num_iteration, c, c_giant);
     fflush(stdout);
+    end = clock();
+    elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("approximated in %f seconds\n", elapsed);
   }
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */
   else if (diam) {
@@ -361,7 +366,7 @@ int main(int argc, char **argv){
   }
   
   /* cannot be used because of renumbering... */
-  /* free_graph(g); */
+  free_graph(g); // MOD no renumbering so can be used
   free(dist);
   free(c);
   free(c_s);
