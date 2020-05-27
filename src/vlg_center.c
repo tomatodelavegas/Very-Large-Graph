@@ -271,7 +271,7 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
         report_error("calculate_center: malloc error histo");
         return;
     }
-    int upper_diam = -1, lower_diam, rayon;
+    int upper_diam = -1, lower_diam, rayon = ~0U >> 1; // or use INT_MAX
     int temp_upper_diam = 0;
     float cur_rayon_approx;
 
@@ -309,7 +309,7 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
         if (temp_upper_diam < upper_diam)
             upper_diam = temp_upper_diam;
         // taking the min, since slight chance cur_rayon_approx will be better
-        rayon = min(rayon,(upper_diam + lower_diam) / 4);
+        rayon = min(rayon, max_dist);//(upper_diam + lower_diam) / 4);
         rayon = min(rayon, cur_rayon_approx); // (diametral node eccentricity)/2 can be a better rayon
 
         update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
@@ -343,9 +343,29 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1); // FIXME: remove hardcoded and use parameter
     for (int i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
+    //copy_node = middle_nodes[random()%middle_nodes_size]; // one most probable middle node
+    // TODO: parameter for maximum probable middle nodes number BFS for better rayon and diameter
+    // perform BFS from central nodes to get diametral node to perform BFS
+    // TODO: test this version:
+    // at each iteration:
+    // - from node u: 1 BFS for better center, rayon, diam approximation
+    //   (gives us a list of most probable centers)
+    // - from non visited most probable central node c: 1 BFS to compute next u
+    //   which is the next non visited diametral starting point node
+    //   (gives us a list of diametral nodes)
+    for (int i = 0; i < middle_nodes_size; ++i) {
+        num_iterations += 2;
+        copy_node = middle_nodes[i];
+        job_node = get_multisweep_node(g, copy_node, &max_dist); // one random diametral node from middle
+        rayon = max_dist; // :'(
+        lower_diam = max(lower_diam, get_vertice_eccentricity(g, job_node));
+        fprintf(stdout, "\nmost probable central nodes %d BFS to %d, computing BFS", copy_node, job_node);
+        fprintf(stdout, "\ncentral BFS %dth iteration %d %d %d", num_iterations, lower_diam, upper_diam, rayon);
+    }
     fprintf(stdout, "\n");
     fprintf(stdout, "%d BFS done\n", num_iterations + 1);
     fprintf(stdout, "Final values: %d %d %d\n", lower_diam, upper_diam, rayon);
+    fprintf(stdout, "Approximated diameter: %d; Approximated rayon: %d\n", lower_diam, rayon);
     free(middle_nodes);
     free(multisweep_check);
 }
