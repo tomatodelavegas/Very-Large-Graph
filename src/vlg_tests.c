@@ -95,7 +95,7 @@ void test_leafs_rm_lw_than(graph *g, int v)
                 break;
         }
     }
-    bool is_empty = remove_leafs_closer_than(&leafs, &nb_leafs, min_dist);
+    bool is_empty = remove_leafs_closer_than(leafs, &nb_leafs, min_dist);
     fprintf(stderr, "%d, %d, %d\n", is_empty, nb_leafs, size_after_rm);
     assert((is_empty && size_after_rm == 0) || (!is_empty && size_after_rm > 0));
     assert(size_after_rm == nb_leafs);

@@ -51,13 +51,13 @@ int find_maximum(int *a, int n) {
 /**
  ** remove_leafs_closer_than: remove leafs that are closer than the given dist
  **
- ** struct leaf_node **leafs:   pointer to the leafs array
+ ** struct leaf_node *leafs:    leafs array
  ** int *nb_leafs:              pointer to the leafs array size
  ** int min_dist:               minimal distance criteria for leafs
  **
  ** returns bool:               returns true if there is no more leafs in the array
  **/
-bool remove_leafs_closer_than(struct leaf_node **leafs, int *nb_leafs, int min_dist)
+bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_dist)
 {
     if (leafs == NULL || *nb_leafs < 0)
         report_error("remove_leafs_closer_than: leafs list is NULL");
@@ -65,11 +65,12 @@ bool remove_leafs_closer_than(struct leaf_node **leafs, int *nb_leafs, int min_d
         return true;
     int i;
     for (i = 0; i < *nb_leafs;) {
-        if ((*leafs)[i].dist < min_dist) {
-            // remove (*leafs)[i], at (*leafs)[i] will be last element, size is decreased
+        if (leafs[i].dist < min_dist) {
+            // remove leafs[i]; leafs[i] will be last element, size is decreased
             // !!! TODO: check that this work
             // memmove(dest, src, nbbytes);
-            memmove((*leafs + i), (*leafs + *nb_leafs - 1), sizeof(struct leaf_node));
+            // TODO: consider using memcpy since there should not be overlapping
+            memmove((leafs + i), (leafs + *nb_leafs - 1), sizeof(struct leaf_node));
             *nb_leafs -= 1;
             if (*nb_leafs == 0)
                 return true;
