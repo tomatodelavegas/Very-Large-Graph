@@ -121,3 +121,42 @@ void test_leafs_rm_lw_than(graph *g, int v)
     free(depth_tree);
     free(tree);
 }
+
+static inline int leaf_compare(const void *l1, const void *l2)
+{
+  struct leaf_node *e1 = (struct leaf_node *)l1;
+  struct leaf_node *e2 = (struct leaf_node *)l2;
+  return e1->dist - e2->dist;
+}
+
+void test_pop_farthest(graph *g, int v)
+{
+    int *depth_tree, *tree;
+    struct leaf_node *leafs, *sorted_leafs;
+    int nb_leafs = 0;
+    int max_dist;
+    int i;
+    if((tree = (int *)calloc(g->n + 1, sizeof(int))) == NULL)
+        report_error("malloc error: tree array creation");
+    if((leafs = (struct leaf_node *)calloc(g->n, sizeof(struct leaf_node))) == NULL)
+        report_error("malloc error: leaf nodes array creation");
+    fprintf(stderr, "starting graph leafs detection from node %d\n", v);
+    depth_tree = depth_bfs_tree(g, v, &max_dist, &tree, leafs, &nb_leafs);
+
+    sorted_leafs = malloc(nb_leafs * sizeof(struct leaf_node));
+    memcpy(sorted_leafs, leafs, nb_leafs * sizeof(struct leaf_node));
+    qsort(sorted_leafs, nb_leafs, sizeof(struct leaf_node), leaf_compare);
+
+    fprintf(stderr, "copied leaf nodes array sorted!\n");
+    fprintf(stderr, "checking pop_farthest_leaf returns the good array\n");
+    for (i = nb_leafs - 1; i >= 0; --i) {
+        fprintf(stderr, "id:%d, dist:%d\n", sorted_leafs[i].id, sorted_leafs[i].dist);
+        // sadly no memcmp since same order for same dist elements is not a prerequisite
+        //assert(memcmp(sorted_leafs[i], pop_farthest_leaf(leafs, &nb_leafs)) == 0);
+        assert(sorted_leafs[i].dist == pop_farthest_leaf(leafs, &nb_leafs)->dist);
+    }
+
+    free(leafs);
+    free(depth_tree);
+    free(tree);
+}

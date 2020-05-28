@@ -22,7 +22,7 @@ int find_maximum(int *a, int n);
 
 bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_dist);
 
-struct leaf_node *pop_farthest_leaf(struct leaf_node **leafs, int *nb_leafs);
+struct leaf_node *pop_farthest_leaf(struct leaf_node *leafs, int *nb_leafs);
 
 int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size);
 

@@ -17,4 +17,6 @@ void test_leafs_detection(graph *g, int v);
 
 void test_leafs_rm_lw_than(graph *g, int v);
 
+void test_pop_farthest(graph *g, int v);
+
 #endif //VLG_VLG_TESTS_H

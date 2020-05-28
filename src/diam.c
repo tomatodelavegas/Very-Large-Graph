@@ -189,6 +189,7 @@ int main(int argc, char **argv){
       v = random()%g->n;
     test_leafs_detection(g, v);
     test_leafs_rm_lw_than(g, v);
+    test_pop_farthest(g, v);
     /**
      * TODO: Get rid of randomness in profit of sweeping
      * TODO: current results heavilly depend on random starting points

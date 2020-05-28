@@ -84,31 +84,31 @@ bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_di
 /**
  ** pop_farthest_leaf: returns the maximum distance leaf from leafs array, it is removed
  ** 
- ** struct leaf_node **leafs:       the leafs array pointer
+ ** struct leaf_node *leafs:        the leafs array
  ** int *nb_leafs:                  the number of leafs
  **
  ** returns struct leaf_node *:     the farthest leaf node, or NULL if no more leaf
  **/
-struct leaf_node *pop_farthest_leaf(struct leaf_node **leafs, int *nb_leafs)
+struct leaf_node *pop_farthest_leaf(struct leaf_node *leafs, int *nb_leafs)
 {
     if (leafs == NULL || *nb_leafs < 0)
         report_error("pop_farthest_leaf: leafs list is NULL");
     if (nb_leafs == 0)
         return NULL;
     int i;
-    struct leaf_node *max_leaf = *leafs;
+    struct leaf_node *max_leaf = leafs;
     int max = max_leaf->dist;
     for (i = 1; i < *nb_leafs; ++i) {
-        if ((*leafs)[i].dist > max) {
-            max_leaf = (*leafs + i);
+        if (leafs[i].dist > max) {
+            max_leaf = leafs + i;
             max = max_leaf->dist;
         }
     }
     // now swap last element with max_leaf return max_leaf
     // (which is now at end of array)
     struct leaf_node temp = *max_leaf;
-    *max_leaf = (*leafs)[*nb_leafs - 1];
-    (*leafs)[*nb_leafs - 1] = temp;
+    *max_leaf = leafs[*nb_leafs - 1];
+    leafs[*nb_leafs - 1] = temp;
     // *nb_leafs is decreased
     *nb_leafs -= 1;
     return max_leaf;
