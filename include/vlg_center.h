@@ -10,9 +10,14 @@
 #include "magnien_distances.h"
 #include "vlg_utils.h"
 
+struct leaf_node {
+    int id; /** id of the leaf vertice **/
+    int dist; /** distance from BFS starting point **/
+}; /** leaf_node structure to old vertice id and distance from BFS start **/
+
 /******** GRAPH CENTER functions - begin *********/
 
-int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree);
+int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_node **leafs, int *nb_leafs);
 
 int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node, int *diameter, int *diam_upper);
 

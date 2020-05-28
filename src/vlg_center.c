@@ -23,7 +23,7 @@
 static inline int get_multisweep_node(graph *g, int start, int *max_ecc)
 {
     int max = 0;
-    int *tree = depth_bfs_tree(g, start, &max, NULL);
+    int *tree = depth_bfs_tree(g, start, &max, NULL, NULL, NULL);
     if (max == -1 || max == 0){
         report_error("get_multisweep_node: depth computation error");
         return -1;
@@ -44,7 +44,7 @@ static inline int get_multisweep_node(graph *g, int start, int *max_ecc)
  **/
 static inline int get_vertice_eccentricity(graph *g, int start) {
     int max;
-    int *depth_tree = depth_bfs_tree(g, start, &max, NULL);
+    int *depth_tree = depth_bfs_tree(g, start, &max, NULL, NULL, NULL);
     if (max == -1 || max == 0)
         report_error("get_eccentricity: depth computation error");
     free(depth_tree);
@@ -57,10 +57,15 @@ static inline int get_vertice_eccentricity(graph *g, int start) {
  ** Return the depth of each node
  ** And compute magnien tree at the same time
  ** magnien_tree: node links with bfs computation
+ ** struct leaf_node **leafs:      optionnal pre-allocated leaf_nodes list
+ ** int *nb_leafs:                 if leafs != NULL && *nb_leafs == 0, will compute the number of leafs, otherwise use it
+ **                                beware: (v should not be a leaf itself for leaf detections
+ **                                to get all graph leafs)
  **/
-int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree)
+int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_node **leafs, int *nb_leafs)
 {
-    int u, i;
+    bool compute_leafs = leafs != NULL && *nb_leafs == 0; // watch out with order here
+    int u, i, is_leaf;
     int *depth_tree; // depth tree
     int *tree; // magnien tree
     int curr_depth = 0;
@@ -87,12 +92,33 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree)
             queue_add(q, -1);
             continue;
         }
+        is_leaf = true;
         for (i=0;i<g->degrees[v];++i) {
             u = g->links[v][i];
             if (depth_tree[u]==-1){
                 queue_add(q,u);
+                is_leaf = false;
                 depth_tree[u] = curr_depth;
                 tree[u] = v;
+            }
+        }
+        /** leafs computation **/
+        if (leafs != NULL && is_leaf) {
+            if (compute_leafs) { // recompute all leafs
+                (*leafs)[*nb_leafs].id = v;
+                (*leafs)[*nb_leafs].dist = curr_depth;
+                *nb_leafs += 1; // watch out not ++; !
+            } else { // update leafs distance only if it exists
+                // do not change *nb_leafs !! use it to find if leaf isn't removed
+                for (i = 0; i < *nb_leafs; ++i) {
+                // !!! FIXME: this loop will be insanely slow
+                // !!! instead have an extra array storing at each index (leaf id) the distance,
+                // !!! alongside a final loop to go through this array and update leafs array dist
+                    if ((*leafs)[i].id == v) {
+                        (*leafs)[i].dist = curr_depth;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -114,7 +140,7 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size, int* nex
     int i = 0;
     int max = -1;
     int *magnien_tree = NULL;
-    int *depth_tree = depth_bfs_tree(g, start, &max, &magnien_tree);
+    int *depth_tree = depth_bfs_tree(g, start, &max, &magnien_tree, NULL, NULL);
     if (max == -1 || max == 0)
         report_error("compute_central_vertices: depth computation error");
     // On calcul le milieu, si nombre impaire il va falloir prendre
