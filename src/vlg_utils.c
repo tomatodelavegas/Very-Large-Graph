@@ -37,6 +37,10 @@ int min(int a, int b) {
     return a < b ? a : b;
 }
 
+float min_float(float a, float b){
+    return a < b ? a : b;
+}
+
 /** MOD: Max of an array of int */
 int find_maximum(int *a, int n) {
   int c, max, index;
