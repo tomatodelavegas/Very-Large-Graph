@@ -31,7 +31,7 @@ void test_leafs_detection(graph *g, int v)
     if((leafs = (struct leaf_node *)calloc(g->n, sizeof(struct leaf_node))) == NULL)
         report_error("malloc error: leaf nodes array creation");
     fprintf(stderr, "starting graph leafs detection from node %d\n", v);
-    depth_tree = depth_bfs_tree(g, v, &max_dist, &tree, &leafs, &nb_leafs);
+    depth_tree = depth_bfs_tree(g, v, &max_dist, &tree, leafs, &nb_leafs);
     fprintf(stderr, "found %d leafs\n", nb_leafs);
     for (i = 0; i < nb_leafs; ++i) {
       are_leafs[leafs[i].id] = 1;
@@ -82,7 +82,7 @@ void test_leafs_rm_lw_than(graph *g, int v)
     if((leafs = (struct leaf_node *)calloc(g->n, sizeof(struct leaf_node))) == NULL)
         report_error("malloc error: leaf nodes array creation");
     fprintf(stderr, "starting graph leafs detection from node %d\n", v);
-    depth_tree = depth_bfs_tree(g, v, &max_dist, &tree, &leafs, &nb_leafs);
+    depth_tree = depth_bfs_tree(g, v, &max_dist, &tree, leafs, &nb_leafs);
     min_dist = max_dist;
     fprintf(stderr, "%d leafs found ! Removing leafs < %d\n", nb_leafs, min_dist);
 
@@ -111,7 +111,7 @@ void test_leafs_rm_lw_than(graph *g, int v)
     free(depth_tree);
     // !!! now BFS from u, trying the update distances (TODO: move to other test function)
     fprintf(stderr, "second BFS from %d for dist update\n", u); // TODO: not really a test...
-    depth_tree = depth_bfs_tree(g, u, &max_dist, &tree, &leafs, &nb_leafs);
+    depth_tree = depth_bfs_tree(g, u, &max_dist, &tree, leafs, &nb_leafs);
     min_dist = max_dist;
     for (i = 0; i < nb_leafs; ++i) {
         fprintf(stderr, "id:%d dist:%d\n", leafs[i].id, leafs[i].dist);

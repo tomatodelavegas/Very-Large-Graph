@@ -57,12 +57,12 @@ static inline int get_vertice_eccentricity(graph *g, int start) {
  ** Return the depth of each node
  ** And compute magnien tree at the same time
  ** magnien_tree: node links with bfs computation
- ** struct leaf_node **leafs:      optionnal pre-allocated leaf_nodes list
+ ** struct leaf_node *leafs:       optionnal pre-allocated leaf_nodes list
  ** int *nb_leafs:                 if leafs != NULL && *nb_leafs == 0, will compute the number of leafs, otherwise use it
  **                                beware: (v should not be a leaf itself for leaf detections
  **                                to get all graph leafs)
  **/
-int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_node **leafs, int *nb_leafs)
+int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_node *leafs, int *nb_leafs)
 {
     bool compute_leafs = leafs != NULL && *nb_leafs == 0; // watch out with order here
     int u, i, is_leaf;
@@ -105,8 +105,8 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
         /** leafs computation **/
         if (leafs != NULL && is_leaf) {
             if (compute_leafs) { // recompute all leafs
-                (*leafs)[*nb_leafs].id = v;
-                (*leafs)[*nb_leafs].dist = curr_depth - 1;
+                leafs[*nb_leafs].id = v;
+                leafs[*nb_leafs].dist = curr_depth - 1;
                 *nb_leafs += 1; // watch out not ++; !
             }// else { // update leafs distance only if it exists
                 // do not change *nb_leafs !! use it to find if leaf isn't removed
@@ -125,8 +125,8 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
     if (leafs != NULL && !compute_leafs) { // updating leafs
         // if leafs are supposed to be updated, go through them and take there depth as
         for (i = 0; i < *nb_leafs; ++i) {
-            if (depth_tree[(*leafs)[i].id] != -1) {
-                (*leafs)[i].dist = depth_tree[(*leafs)[i].id];
+            if (depth_tree[leafs[i].id] != -1) {
+                leafs[i].dist = depth_tree[leafs[i].id];
             } else {
                 report_error("Something went really bad, computed leaf not in BFS");
             }
