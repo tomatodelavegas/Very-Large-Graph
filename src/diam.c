@@ -11,6 +11,8 @@
 #include "vlg_save.h"
 #include "vlg_center.h"
 
+#include "vlg_tests.h"
+
 /* Output functions */
 
 void usage(char *c){
@@ -182,12 +184,17 @@ int main(int argc, char **argv){
   }
   else if (center) // MOD: Added
   {
+    int v = random()%g->n;
+    while (c[v] != c_giant)
+      v = random()%g->n;
+    test_leafs_detection(g, v);
+    test_leafs_rm_lw_than(g, v);
     /**
      * TODO: Get rid of randomness in profit of sweeping
      * TODO: current results heavilly depend on random starting points
      * TODO: multiple sweep starting from each step "best" bound for the diameter
      * TODO: maybe take the distribution approach instead of intersection, or hybrid
-     */
+     *
     clock_t begin, end;
     double elapsed;
     printf("%s\n", "Computing graph center approximation (alongside rayon and diameter)...");
@@ -201,6 +208,7 @@ int main(int argc, char **argv){
     end = clock();
     elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
     printf("approximated in %f seconds\n", elapsed);
+    */
   }
   /* double-sweep lower bound and highest degree tree upper bound for the diameter */
   else if (diam) {
