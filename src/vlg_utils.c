@@ -59,9 +59,9 @@ int find_maximum(int *a, int n) {
  **/
 bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_dist)
 {
-    if (leafs == NULL || *nb_leafs < 0)
-        report_error("remove_leafs_closer_than: leafs list is NULL");
-    if (nb_leafs == 0)
+    if (*nb_leafs < 0)
+        report_error("remove_leafs_closer_than: leaf list size negative");
+    if (leafs == NULL || nb_leafs == 0)
         return true;
     int i;
     for (i = 0; i < *nb_leafs;) {

@@ -275,6 +275,97 @@ int random_node_depthtree(int *tree, int size, int max)
     return -1;
 }
 
+
+
+/**
+ ** Steps:
+ ** Init:
+ **     - u = random node
+ **     - v = get_multi_sweep_node(u) // diametral node
+ **     - middles = compute_central_vertices(v, ...)
+ **     - u = bestmiddle
+ **     - goto[1]
+ ** DO:
+ **     - v = pop_farthest_leaf(leafs, &nb_leafs)->id; // v is diametral leaf
+ **     - 
+ **     -[1] depth_bfs_tree(g, u, &max_dist, NULL, leafs, &nb_leafs) // BFS from best middle u
+ **     - // compute bounds
+ **     - remove_leafs_closer_than(lw)
+ **     - 
+ **/
+void compute_center_convergence(graph *g, int num_iterations, int* c, int c_giant)
+{
+    struct leaf_node *leafs, *tmp_leaf; // leafs is array, tmp_leaf is ptr
+    int *depth_tree, *temp_middle_nodes, *middle_nodes, *histo_center_nodes;
+    int max_dist = 0, temp_middle_size, middle_nodes_size, nb_leafs = 0;
+    int lower_diam = 0, rayon = ~0U >> 1, upper_diam = -1, temp_upper_diam = 0;
+    int u,v, i, iter = 1;
+    bool finished = false; // if true, there is no more leafs
+    if ((histo_center_nodes = calloc(g->n + 1, sizeof(int)))== NULL)
+        report_error("compute_center_convergence: malloc error histo");
+    if ((leafs = (struct leaf_node *)calloc(g->n, sizeof(struct leaf_node)))== NULL)
+        report_error("compute_center_convergence: malloc error histo");
+    printf("#1:i=iteration_number #2:best_lower_diam_bound #3:best_upper_diam_bound #4:best_rayon\n");
+    // INIT
+    u = random()%g->n;
+    while (c[u] != c_giant)
+        u = random()%g->n;
+    v = get_multisweep_node(g, u, &max_dist); // max_dist_u
+    fprintf(stderr, "Starting bfs with node %d, then %d\n", u, v);
+    goto DIAMETRALBFS;
+    // main loop
+    do {
+        fprintf(stderr, "Diametral BFS...\n");
+        tmp_leaf = pop_farthest_leaf(leafs, &nb_leafs);
+        fprintf(stderr, "%d leafs\n", nb_leafs);
+        if (tmp_leaf == NULL)
+            break;
+        v = tmp_leaf->id;
+        free(middle_nodes);
+        // * diametral BFS (from v)
+    DIAMETRALBFS: temp_middle_nodes = compute_central_vertices(g, v, &temp_middle_size, &v, &max_dist, &temp_upper_diam);
+        if (temp_middle_nodes == NULL)
+            return;
+        // * diametral BFS bounds: lower_diam & upper_diam
+        lower_diam = max(lower_diam, max_dist); // diametral nodes are great for diam
+        if (upper_diam == -1)
+            upper_diam = temp_upper_diam;
+        if (temp_upper_diam < upper_diam)
+            upper_diam = temp_upper_diam;
+        // * Histogram center update
+        update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
+        free(temp_middle_nodes);
+        // * Take best center (as u)
+        middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1);
+        u = middle_nodes[random()%middle_nodes_size]; // one best center
+        if (iter != 1 && nb_leafs == 0) // we just removed the last leaf and do not want to recompute again
+        {
+            free(leafs);
+            leafs = NULL;
+        }
+    CENTRALBFS: depth_tree = depth_bfs_tree(g, u, &max_dist, NULL, leafs, &nb_leafs);
+        fprintf(stderr, "%d leafs\n", nb_leafs);
+        // * central BFS bounds: rayon
+        rayon = min(rayon, max_dist); // middle nodes are great to approximate rayon
+        finished = remove_leafs_closer_than(leafs, &nb_leafs, lower_diam / 2);
+        free(depth_tree); // TODO: do we use this ?
+        fprintf(stdout, "%dth iteration %d %d %d\n", iter, lower_diam, upper_diam, rayon);
+        //fprintf(stderr, "%d, %d, %d, %d\n", finished, iter, num_iterations, nb_leafs);
+        fprintf(stderr, "%d leafs\n", nb_leafs);
+    } while(!finished && ++iter < num_iterations);
+    // we still have middle_nodes access
+    fprintf(stdout, "Center nodes found:\n");
+    for (i = 0; i < middle_nodes_size; ++i)
+        fprintf(stdout, "%d ", middle_nodes[i]);
+    fprintf(stdout, "\n%d BFS done\n", 2*iter);
+    fprintf(stdout, "Final values: %d %d %d\n", lower_diam, upper_diam, rayon);
+    fprintf(stdout, "Approximated diameter: %d; Approximated rayon: %d\n", lower_diam, rayon);
+    free(histo_center_nodes);
+    if (leafs != NULL)
+        free(leafs);
+    free(middle_nodes);
+}
+
 /** MOD: Added
  ** Steps:
  ** - depth_bfs_tree() gets the farthest points
@@ -303,19 +394,16 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     int *temp_middle_nodes = NULL;
     int max_dist = 0;
     int *histo_center_nodes;
-    if ((histo_center_nodes = calloc(g->n + 1, sizeof(int)))== NULL){
+    if ((histo_center_nodes = calloc(g->n + 1, sizeof(int)))== NULL)
         report_error("calculate_center: malloc error histo");
-        return;
-    }
     int upper_diam = -1, lower_diam, rayon = ~0U >> 1; // or use INT_MAX
     int temp_upper_diam = 0;
     float cur_rayon_approx;
 
     fprintf(stderr, "Starting bfs with node %d\n", start);
     int *multisweep_check;
-    if ((multisweep_check = calloc(g->n + 1, sizeof(int)))== NULL){
+    if ((multisweep_check = calloc(g->n + 1, sizeof(int)))== NULL)
         report_error("calculate_center: multisweep_check: error malloc()");
-    }
     int counter_tries = 0;
     int counter_limit = 100; // FIXME use a parameter instead
 
@@ -324,10 +412,8 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     cur_rayon_approx = max_dist; // this is a not diametral vertice we do not /= 2
     lower_diam = max_dist;
 
-    if (job_node == -1){ // error case
+    if (job_node == -1)
         report_error("calculate_center: get_multisweep_node: error finding node");
-        return;
-    }
 
     printf("#1:i=iteration_number #2:best_lower_diam_bound #3:best_upper_diam_bound #4:best_rayon #5:current_bfs_rayon_approx\n");
     for (int i = 0; i < num_iterations; ++i) {
@@ -361,17 +447,15 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
 	            job_node = random()%g->n;
             }
             counter_tries++;
-            if (counter_tries >= counter_limit){
+            if (counter_tries >= counter_limit) {
                 memset(multisweep_check, 0, g->n * sizeof(*multisweep_check)); // reset on too many iterations
                 counter_tries = 0;
             }
         }
         if (copy_node != job_node){ // check if loop changed the current node, if so, bfs needed
             job_node = get_multisweep_node(g, job_node, &max_dist);
-            if (job_node == -1){ // error case
+            if (job_node == -1)
                 report_error("calculate_center: get_multisweep_node: error finding node");
-                return;
-            }
         }
 
     }
