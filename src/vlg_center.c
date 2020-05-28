@@ -106,19 +106,29 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
         if (leafs != NULL && is_leaf) {
             if (compute_leafs) { // recompute all leafs
                 (*leafs)[*nb_leafs].id = v;
-                (*leafs)[*nb_leafs].dist = curr_depth;
+                (*leafs)[*nb_leafs].dist = curr_depth - 1;
                 *nb_leafs += 1; // watch out not ++; !
-            } else { // update leafs distance only if it exists
+            }// else { // update leafs distance only if it exists
                 // do not change *nb_leafs !! use it to find if leaf isn't removed
-                for (i = 0; i < *nb_leafs; ++i) {
+                //for (i = 0; i < *nb_leafs; ++i) {
                 // !!! FIXME: this loop will be insanely slow
                 // !!! instead have an extra array storing at each index (leaf id) the distance,
                 // !!! alongside a final loop to go through this array and update leafs array dist
-                    if ((*leafs)[i].id == v) {
-                        (*leafs)[i].dist = curr_depth;
-                        break;
-                    }
-                }
+                //    if ((*leafs)[i].id == v) {
+                //        (*leafs)[i].dist = curr_depth - 1;
+                //        break;
+                //    }
+                //}
+            //}
+        }
+    }
+    if (leafs != NULL && !compute_leafs) { // updating leafs
+        // if leafs are supposed to be updated, go through them and take there depth as
+        for (i = 0; i < *nb_leafs; ++i) {
+            if (depth_tree[(*leafs)[i].id] != -1) {
+                (*leafs)[i].dist = depth_tree[(*leafs)[i].id];
+            } else {
+                report_error("Something went really bad, computed leaf not in BFS");
             }
         }
     }
