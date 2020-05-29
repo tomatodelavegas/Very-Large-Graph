@@ -459,13 +459,8 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1);
     for (int i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
-    // perform BFS from central nodes to get diametral node to perform BFS
     // at each iteration:
-    // - from node u: 1 BFS for better center, rayon, diam approximation
-    //   (gives us a list of most probable centers)
-    // - from non visited most probable central node c: 1 BFS to compute next u
-    //   which is the next non visited diametral starting point node
-    //   (gives us a list of diametral nodes)
+    // computes final values and enhance bounds with center nodes found
     for (int i = 0; i < middle_nodes_size; ++i) {
         nb_bfs += 2;
         num_iterations += 1;
@@ -473,8 +468,6 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
         job_node = get_multisweep_node(g, copy_node, &max_dist); // one random diametral node from middle
         rayon = min(max_dist, rayon);
         lower_diam = max(lower_diam, get_vertice_eccentricity(g, job_node));
-        //fprintf(stdout, "\nProbable central node is %d", copy_node);
-        //fprintf(stdout, "\nMultiple BFS yielded %d as a diametral node", job_node);
         fprintf(stdout, "\ncentral BFS from %d node: %dth iteration %d %d %d", 
         copy_node, num_iterations, lower_diam, upper_diam, rayon);
     }
