@@ -11,11 +11,14 @@
 #include "vlg_save.h"
 #include "vlg_center.h"
 
+#include "vlg_tests.h"
+
 /* Output functions */
 
 void usage(char *c){
   fprintf(stderr,"Usage: %s -diam nb_max difference\n",c);
-  fprintf(stderr,"Usage: %s -center nb_iteration\n",c); // MOD: center calculation option
+  fprintf(stderr,"Usage: %s -center nb_iteration\n",c); // MOD: center bruteforce calculation option
+  fprintf(stderr,"Usage: %s -centerconv nb_iteration\n",c); // MOD: center convergence calculation option
   fprintf(stderr,"Usage: %s -prec nb_max precision\n",c);
   fprintf(stderr,"Usage: %s -tlb|dslb|tub|rtub|hdtub nb [deg_begin]\n",c);
   fprintf(stderr, "\n");
@@ -23,7 +26,8 @@ void usage(char *c){
   fprintf(stderr," -prec nb_max precision: compute bounds for the diameter until it is evaluated with a relative error of at most 'precision', or until nb_max iterations have been done.\n");
   fprintf(stderr," -savegiant fpath: saves the giant component to the specified folder.\n"); // MOD: Added this option to save the giant component
   fprintf(stderr," -savegiantbfs fpath: saves the giant component to the specified folder using BFS reordering.\n"); // MOD: Added this option to save the giant component (BFS method)
-  fprintf(stderr," -center: compute the best graph centers candidates.\n"); // MOD: Added this option to compute the center (BFS intersection method)
+  fprintf(stderr," -center nb_iteration: compute the best graph centers/radius/diameter candidates with a bruteforce multisweep method.\n"); // MOD: Added this option to compute the center (BFS probability method)
+  fprintf(stderr," -centerconv nb_iteration: compute the best graph centers/radius/diameter candidates with a convergence of leafs method.\n"); // MOD: Added this option to compute the center (BFS intersection method)
   fprintf(stderr, "\n");
   fprintf(stderr, " -tlb nb: computes trivial lower bounds, from nb randomly chosen nodes.\n");
   fprintf(stderr," -dslb nb: computes double-sweep lower bounds, from nb randomly chosen nodes.\n");
@@ -39,7 +43,7 @@ int main(int argc, char **argv){
   int i;
   int *sorted_nodes, *dist;
   int tlb, diam, rtub, dslb, tub,  hdtub, nb_max, prec_option, 
-  savegiant, savegiantbfs, center; // MOD
+  savegiant, savegiantbfs, center, centerconv; // MOD
   char *savegiant_path = NULL; // MOD
   int deg_begin=0;
   float precision;
@@ -51,7 +55,7 @@ int main(int argc, char **argv){
 
   /* parse the command line */
   tlb=0; diam=0; prec_option=0; dslb=0; tub=0; rtub=0;
-  hdtub=0, savegiant=0, savegiantbfs=0, center=0; // MOD
+  hdtub=0, savegiant=0, savegiantbfs=0, center=0, centerconv=0; // MOD
   for (i=1; i<argc; i++){
     if (strcmp(argv[i],"-tlb")==0) {
       tlb = 1;
@@ -73,6 +77,12 @@ int main(int argc, char **argv){
     }
     else if (strcmp(argv[i],"-center")==0) { // MOD: Added option
       center = 1;
+      if (i == argc - 1)
+        usage(argv[0]);
+      num_iteration = atoi(argv[++i]);
+    }
+    else if (strcmp(argv[i],"-centerconv")==0) { // MOD: Added option
+      centerconv = 1;
       if (i == argc - 1)
         usage(argv[0]);
       num_iteration = atoi(argv[++i]);
@@ -119,7 +129,7 @@ int main(int argc, char **argv){
     else
       usage(argv[0]);
   }
-  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant+savegiantbfs+center != 1){ // MOD
+  if (tlb+diam+prec_option+rtub+dslb+tub+hdtub+savegiant+savegiantbfs+center+centerconv != 1){ // MOD
     usage(argv[0]);
   }
   
@@ -180,14 +190,8 @@ int main(int argc, char **argv){
     elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
     printf("Saved in %f seconds\n", elapsed);
   }
-  else if (center) // MOD: Added
+  else if (center) // MOD: Added Center computation bruteforce multisweep
   {
-    /**
-     * TODO: Get rid of randomness in profit of sweeping
-     * TODO: current results heavilly depend on random starting points
-     * TODO: multiple sweep starting from each step "best" bound for the diameter
-     * TODO: maybe take the distribution approach instead of intersection, or hybrid
-     */
     clock_t begin, end;
     double elapsed;
     printf("%s\n", "Computing graph center approximation (alongside rayon and diameter)...");
@@ -195,8 +199,19 @@ int main(int argc, char **argv){
     int v = random()%g->n;
     while (c[v] != c_giant)
       v = random()%g->n;
-    // Use loop for small graphs, to avoid randomness: for (int v = 0; v < g->n; ++v) {
     calculate_center(g, v, num_iteration, c, c_giant);
+    fflush(stdout);
+    end = clock();
+    elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
+    printf("approximated in %f seconds\n", elapsed);
+  }
+  else if (centerconv) // MOD: Added Center computation convergence
+  {
+    clock_t begin, end;
+    double elapsed;
+    printf("%s\n", "Computing graph center approximation (alongside rayon and diameter)...");
+    begin = clock();
+    compute_center_convergence(g, num_iteration, c, c_giant);
     fflush(stdout);
     end = clock();
     elapsed = (double)(end - begin) / CLOCKS_PER_SEC;

@@ -76,7 +76,7 @@ void save_giant_bfs(graph *g, int *c, int c_giant, int size_giant, char *path) {
     int i;
     if ((seen = (bool *)malloc(g->n * sizeof(int))) == NULL)
         report_error("save_giant: seen array: calloc() error");
-    if ((corresp=(int *)malloc(g->n * sizeof(int))) == NULL) // FIXME: we will need to realloc
+    if ((corresp=(int *)malloc(g->n * sizeof(int))) == NULL) // we could realloc...
         report_error("save_giant: correspondance array: malloc() error");
     f = fopen(path, "w");
     save_giant_degrees_or_links(0, f, seen, corresp, g, c, size_giant, c_giant);
