@@ -121,6 +121,7 @@ void test_pop_farthest(graph *g, int v)
 {
     int *depth_tree, *tree;
     struct leaf_node *leafs, *sorted_leafs;
+    struct leaf_node *max_leaf;
     int nb_leafs = 0;
     int max_dist;
     int i;
@@ -131,17 +132,23 @@ void test_pop_farthest(graph *g, int v)
     fprintf(stderr, "starting graph leafs detection from node %d\n", v);
     depth_tree = depth_bfs_tree(g, v, &max_dist, &tree, leafs, &nb_leafs);
 
+    swap_leafs(leafs, leafs+nb_leafs - 1);
+    swap_leafs(leafs+(nb_leafs/2), leafs+nb_leafs - 1);
     sorted_leafs = malloc(nb_leafs * sizeof(struct leaf_node));
     memcpy(sorted_leafs, leafs, nb_leafs * sizeof(struct leaf_node));
     qsort(sorted_leafs, nb_leafs, sizeof(struct leaf_node), leaf_compare);
+    for (i = 0; i < nb_leafs; ++i)
+        fprintf(stderr, "id:%d; dist:%d\n", leafs[i].id, leafs[i].dist);
 
     fprintf(stderr, "copied leaf nodes array sorted!\n");
     fprintf(stderr, "checking pop_farthest_leaf returns the good array\n");
     for (i = nb_leafs - 1; i >= 0; --i) {
-        fprintf(stderr, "id:%d, dist:%d\n", sorted_leafs[i].id, sorted_leafs[i].dist);
         // sadly no memcmp since same order for same dist elements is not a prerequisite
         //assert(memcmp(sorted_leafs[i], pop_farthest_leaf(leafs, &nb_leafs)) == 0);
-        assert(sorted_leafs[i].dist == pop_farthest_leaf(leafs, &nb_leafs)->dist);
+        max_leaf = pop_farthest_leaf(leafs, &nb_leafs);
+        fprintf(stderr, "@id:%d, dist:%d\n", sorted_leafs[i].id, sorted_leafs[i].dist);
+        fprintf(stderr, "#id:%d, dist:%d\n", max_leaf->id, max_leaf->dist);
+        assert(sorted_leafs[i].dist == max_leaf->dist);
     }
 
     free(leafs);

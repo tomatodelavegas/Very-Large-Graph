@@ -14,6 +14,8 @@ struct leaf_node {
     int dist; /** distance from BFS starting point **/
 }; /** leaf_node structure to old vertice id and distance from BFS start **/
 
+void swap_leafs(struct leaf_node *a, struct leaf_node *b);
+
 bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_dist);
 
 struct leaf_node *pop_farthest_leaf(struct leaf_node *leafs, int *nb_leafs);
