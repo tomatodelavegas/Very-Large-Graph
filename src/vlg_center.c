@@ -400,7 +400,7 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     if ((multisweep_check = calloc(g->n + 1, sizeof(int)))== NULL)
         report_error("calculate_center: multisweep_check: error malloc()");
     int counter_tries = 0;
-    int counter_limit = 100; // FIXME use a parameter instead
+    int counter_limit = 100;
 
     int *results = NULL;
     int job_node = get_multisweep_node(g, start, &max_dist);
@@ -419,14 +419,14 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
             return; // non allocated array/ error happened
 
         lower_diam = max(lower_diam, max_dist);
-        cur_rayon_approx = min_float(cur_rayon_approx, (float)max_dist/2); // this is an approximation is current middle node BFS rayon
+        cur_rayon_approx = min_float(cur_rayon_approx, (float)lower_diam/2); // this is an approximation is current middle node BFS rayon
 
         if (upper_diam == -1)
             upper_diam = temp_upper_diam;
         if (temp_upper_diam < upper_diam)
             upper_diam = temp_upper_diam;
         // taking the min, since slight chance cur_rayon_approx will be better
-        rayon = min(rayon, max_dist);//(upper_diam + lower_diam) / 4);
+        rayon = min(rayon, lower_diam);
         rayon = min(rayon, ceil(cur_rayon_approx)); // (diametral node eccentricity)/2 can be a better rayon
 
         update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
@@ -456,7 +456,7 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
 
     }
     fprintf(stdout, "Center nodes found:\n");
-    middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1); // FIXME: remove hardcoded and use parameter
+    middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1);
     for (int i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
     // perform BFS from central nodes to get diametral node to perform BFS
@@ -468,14 +468,15 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     //   (gives us a list of diametral nodes)
     for (int i = 0; i < middle_nodes_size; ++i) {
         nb_bfs += 2;
-        num_iterations += 2;
+        num_iterations += 1;
         copy_node = middle_nodes[i];
         job_node = get_multisweep_node(g, copy_node, &max_dist); // one random diametral node from middle
-        rayon = max_dist; // :'(
+        rayon = min(max_dist, rayon);
         lower_diam = max(lower_diam, get_vertice_eccentricity(g, job_node));
-        fprintf(stdout, "\nProbable central node is %d", copy_node);
-        fprintf(stdout, "\nMultiple BFS yielded %d as a diametral node", job_node);
-        fprintf(stdout, "\ncentral BFS %dth iteration %d %d %d", num_iterations, lower_diam, upper_diam, rayon);
+        //fprintf(stdout, "\nProbable central node is %d", copy_node);
+        //fprintf(stdout, "\nMultiple BFS yielded %d as a diametral node", job_node);
+        fprintf(stdout, "\ncentral BFS from %d node: %dth iteration %d %d %d", 
+        copy_node, num_iterations, lower_diam, upper_diam, rayon);
     }
     fprintf(stdout, "\n");
     fprintf(stdout, "%d BFS done\n", nb_bfs);
