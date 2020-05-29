@@ -190,8 +190,10 @@ int main(int argc, char **argv){
     elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
     printf("Saved in %f seconds\n", elapsed);
   }
-  else if (center) // MOD: Added Center computation bruteforce multisweep
+  /* Center random calculation with radius and diameter */
+  else if (center) // MOD: Added
   {
+    // Current results heavilly depend on random starting points
     clock_t begin, end;
     double elapsed;
     printf("%s\n", "Computing graph center approximation (alongside rayon and diameter)...");

@@ -73,16 +73,18 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
     q = empty_queue(g->n + 1);
     if( (depth_tree = (int*)malloc((g->n + 1) * sizeof(int))) == NULL )
         report_error("bfs_tree: malloc() error");
-    if( (tree=(int *)malloc(g->n*sizeof(int))) == NULL )
+    if(magnien_tree != NULL && (tree=(int *)malloc(g->n*sizeof(int))) == NULL ) // no need of malloc if not used
         report_error("bfs_tree: malloc() error");
     for (i=0;i<g->n;++i){
         depth_tree[i] = -1;
-        tree[i] = -1;
+        if (magnien_tree != NULL)
+            tree[i] = -1;
     }
     queue_add(q,v);
     queue_add(q, -1); // -1 special value acts as level seperator
     depth_tree[v] = curr_depth++;
-    tree[v] = v;
+    if (magnien_tree != NULL)
+        tree[v] = v;
     while (!is_empty_queue(q)) {
         v = queue_get(q);
         if (v == -1){
@@ -99,7 +101,8 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
                 queue_add(q,u);
                 is_leaf = false;
                 depth_tree[u] = curr_depth;
-                tree[u] = v;
+                if (magnien_tree != NULL)
+                    tree[u] = v;
             }
         }
         /** leafs computation **/
@@ -126,8 +129,6 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
 
     if (magnien_tree != NULL)
         *magnien_tree = tree;
-    else
-        free(tree);
     return(depth_tree);
 }
 
@@ -156,7 +157,7 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size, int* nex
     }
     if (counter == 0) {
         free(depth_tree);
-        fprintf(stderr, "compute_central_vertices: no middle vertices could be found !"); // ? report_error
+        report_error("compute_central_vertices: no middle vertices could be found !");
         *resulting_size = 0;
         return NULL;
     }
@@ -344,7 +345,6 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
         // TODO: this will save 1 g->n sized int array !
         free(depth_tree);
         fprintf(stdout, "%dth iteration %d %d %d\n", iter, lower_diam, upper_diam, rayon);
-        //fprintf(stderr, "%d, %d, %d, %d\n", finished, iter, num_iterations, nb_leafs);
     } while(!finished && ++iter < num_iterations);
     // we still have middle_nodes access
     fprintf(stdout, "Center nodes found:\n");
@@ -386,6 +386,8 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     int temp_middle_size = 0;
     int *temp_middle_nodes = NULL;
     int max_dist = 0;
+
+    int nb_bfs = num_iterations;
     int *histo_center_nodes;
     if ((histo_center_nodes = calloc(g->n + 1, sizeof(int)))== NULL)
         report_error("calculate_center: malloc error histo");
@@ -398,11 +400,11 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     if ((multisweep_check = calloc(g->n + 1, sizeof(int)))== NULL)
         report_error("calculate_center: multisweep_check: error malloc()");
     int counter_tries = 0;
-    int counter_limit = 100; // FIXME use a parameter instead
+    int counter_limit = 100;
 
     int *results = NULL;
-    int job_node = get_multisweep_node(g, start, &max_dist);
-    cur_rayon_approx = max_dist; // this is a not diametral vertice we do not /= 2
+    int job_node = get_multisweep_node(g, start, &max_dist); // get a diametrical node from random start one
+    cur_rayon_approx = max_dist; // this is a not diametrical distance we do not /= 2
     lower_diam = max_dist;
 
     if (job_node == -1)
@@ -417,15 +419,15 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
             return; // non allocated array/ error happened
 
         lower_diam = max(lower_diam, max_dist);
-        cur_rayon_approx = min(cur_rayon_approx, max_dist/2); // this is an approximation is current middle node BFS rayon
+        cur_rayon_approx = min_float(cur_rayon_approx, (float)lower_diam/2); // this is an approximation is current middle node BFS rayon
 
         if (upper_diam == -1)
             upper_diam = temp_upper_diam;
         if (temp_upper_diam < upper_diam)
             upper_diam = temp_upper_diam;
         // taking the min, since slight chance cur_rayon_approx will be better
-        rayon = min(rayon, max_dist);//(upper_diam + lower_diam) / 4);
-        rayon = min(rayon, cur_rayon_approx); // (diametral node eccentricity)/2 can be a better rayon
+        rayon = min(rayon, lower_diam);
+        rayon = min(rayon, ceil(cur_rayon_approx)); // (diametral node eccentricity)/2 can be a better rayon
 
         update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
         free(temp_middle_nodes);
@@ -446,35 +448,30 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
             }
         }
         if (copy_node != job_node){ // check if loop changed the current node, if so, bfs needed
+            nb_bfs++;
             job_node = get_multisweep_node(g, job_node, &max_dist);
             if (job_node == -1)
                 report_error("calculate_center: get_multisweep_node: error finding node");
         }
-
     }
     fprintf(stdout, "Center nodes found:\n");
-    middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1); // FIXME: remove hardcoded and use parameter
+    middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1);
     for (int i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
-    // perform BFS from central nodes to get diametral node to perform BFS
     // at each iteration:
-    // - from node u: 1 BFS for better center, rayon, diam approximation
-    //   (gives us a list of most probable centers)
-    // - from non visited most probable central node c: 1 BFS to compute next u
-    //   which is the next non visited diametral starting point node
-    //   (gives us a list of diametral nodes)
+    // computes final values and enhance bounds with center nodes found
     for (int i = 0; i < middle_nodes_size; ++i) {
-        num_iterations += 2;
+        nb_bfs += 2;
+        num_iterations += 1;
         copy_node = middle_nodes[i];
         job_node = get_multisweep_node(g, copy_node, &max_dist); // one random diametral node from middle
-        rayon = max_dist; // :'(
+        rayon = min(max_dist, rayon);
         lower_diam = max(lower_diam, get_vertice_eccentricity(g, job_node));
-        fprintf(stdout, "\nProbable central node is %d", copy_node);
-        fprintf(stdout, "\nMultiple BFS yielded %d as a diametral node", job_node);
-        fprintf(stdout, "\ncentral BFS %dth iteration %d %d %d", num_iterations, lower_diam, upper_diam, rayon);
+        fprintf(stdout, "\ncentral BFS from %d node: %dth iteration %d %d %d", 
+        copy_node, num_iterations, lower_diam, upper_diam, rayon);
     }
     fprintf(stdout, "\n");
-    fprintf(stdout, "%d BFS done\n", num_iterations + 1);
+    fprintf(stdout, "%d BFS done\n", nb_bfs);
     fprintf(stdout, "Final values: %d %d %d\n", lower_diam, upper_diam, rayon);
     fprintf(stdout, "Approximated diameter: %d; Approximated rayon: %d\n", lower_diam, rayon);
     free(middle_nodes);

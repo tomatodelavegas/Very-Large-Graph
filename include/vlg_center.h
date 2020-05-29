@@ -9,6 +9,7 @@
 #include "magnien_utils.h"
 #include "magnien_distances.h"
 #include "vlg_utils.h"
+#include <math.h>
 
 /******** GRAPH CENTER functions - begin *********/
 
