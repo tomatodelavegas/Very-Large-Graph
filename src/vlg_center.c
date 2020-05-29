@@ -311,7 +311,8 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
         free(middle_nodes);
         // * diametral BFS (from v)
     DIAMETRALBFS: fprintf(stderr, "Diametral BFS (from %d)... (%d leafs)\n", v, nb_leafs + 1);
-        temp_middle_nodes = compute_central_vertices(g, v, &temp_middle_size, &v, &max_dist, &temp_upper_diam);
+        temp_middle_nodes = compute_central_vertices(g, v, &temp_middle_size, &u, &max_dist, &temp_upper_diam);
+        // compute_central_vertices will change u but it doesn't matter since set with middle nodes array
         if (temp_middle_nodes == NULL)
             return;
         // * diametral BFS bounds: lower_diam & upper_diam
@@ -322,10 +323,12 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
             upper_diam = temp_upper_diam;
         // * Histogram center update
         update_histogram(histo_center_nodes, temp_middle_nodes, temp_middle_size);
-        free(temp_middle_nodes);
-        // * Take best center (as u)
+        // * Take best center // or could just compute ratio_update
+        // * at the end if u the the last middle node
         middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1);
-        u = middle_nodes[random()%middle_nodes_size]; // one best center
+        u = middle_nodes[random()%middle_nodes_size]; // u is one of the overall best centers
+        //u = temp_middle_nodes[random()%temp_middle_size]; // u is a random last middle node
+        free(temp_middle_nodes);
         if (iter != 1 && nb_leafs == 0) // we just removed the last leaf and do not want to recompute again
         {
             free(leafs);

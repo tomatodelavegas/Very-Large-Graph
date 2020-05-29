@@ -5,6 +5,12 @@
 #include "vlg_utils.h"
 #include "magnien_utils.h"
 
+static inline void swap_leafs(struct leaf_node *a, struct leaf_node *b) {
+    struct leaf_node temp = *a;
+    *a = *b;
+    *b = temp;
+}
+
 /******** UTILITY functions - begin *********/
 
 /** MOD: Added giant component renumbering (not giant components renumbered to end) **/
@@ -105,12 +111,9 @@ struct leaf_node *pop_farthest_leaf(struct leaf_node *leafs, int *nb_leafs)
     }
     // now swap last element with max_leaf return max_leaf
     // (which is now at end of array)
-    struct leaf_node temp = *max_leaf;
-    *max_leaf = leafs[*nb_leafs - 1];
-    leafs[*nb_leafs - 1] = temp;
-    // *nb_leafs is decreased
-    *nb_leafs -= 1;
-    return max_leaf;
+    swap_leafs(max_leaf, leafs + *nb_leafs - 1);
+    *nb_leafs -= 1; // *nb_leafs is decreased
+    return leafs + *nb_leafs; // allready decreased
 }
 
 /**
