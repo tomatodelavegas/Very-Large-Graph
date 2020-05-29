@@ -5,13 +5,13 @@
 #include "vlg_utils.h"
 #include "magnien_utils.h"
 
-static inline void swap_leafs(struct leaf_node *a, struct leaf_node *b) {
+/******** UTILITY functions - begin *********/
+
+void swap_leafs(struct leaf_node *a, struct leaf_node *b) {
     struct leaf_node temp = *a;
     *a = *b;
     *b = temp;
 }
-
-/******** UTILITY functions - begin *********/
 
 /** MOD: Added giant component renumbering (not giant components renumbered to end) **/
 int *giant_perm(graph *g, int *c, int size_giant, int c_giant) {
