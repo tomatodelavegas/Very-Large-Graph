@@ -105,18 +105,6 @@ void test_leafs_rm_lw_than(graph *g, int v)
         fprintf(stderr, "id:%d dist:%d\n", leafs[i].id, leafs[i].dist);
     }
 
-    /**
-    // example code for distance update with another BFS
-    // starting from another node: u ;)
-    free(depth_tree);
-    // !!! now BFS from u, trying the update distances (TODO: move to other test function)
-    fprintf(stderr, "second BFS from %d for dist update\n", u); // TODO: not really a test...
-    depth_tree = depth_bfs_tree(g, u, &max_dist, &tree, leafs, &nb_leafs);
-    min_dist = max_dist;
-    for (i = 0; i < nb_leafs; ++i) {
-        fprintf(stderr, "id:%d dist:%d\n", leafs[i].id, leafs[i].dist);
-    }**/
-
     free(leafs);
     free(depth_tree);
     free(tree);

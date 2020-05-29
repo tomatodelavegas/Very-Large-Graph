@@ -67,8 +67,7 @@ bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_di
     for (i = 0; i < *nb_leafs;) {
         if (leafs[i].dist < min_dist) {
             // remove leafs[i]; leafs[i] will be last element, size is decreased
-            // !!! TODO: check that this work
-            // memmove(dest, src, nbbytes);
+            // MAN: memmove(dest, src, nbbytes);
             // TODO: consider using memcpy since there should not be overlapping
             memmove((leafs + i), (leafs + *nb_leafs - 1), sizeof(struct leaf_node));
             *nb_leafs -= 1;
