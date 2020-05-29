@@ -108,18 +108,7 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
                 leafs[*nb_leafs].id = v;
                 leafs[*nb_leafs].dist = curr_depth - 1;
                 *nb_leafs += 1; // watch out not ++; !
-            }// else { // update leafs distance only if it exists
-                // do not change *nb_leafs !! use it to find if leaf isn't removed
-                //for (i = 0; i < *nb_leafs; ++i) {
-                // !!! FIXME: this loop will be insanely slow
-                // !!! instead have an extra array storing at each index (leaf id) the distance,
-                // !!! alongside a final loop to go through this array and update leafs array dist
-                //    if ((*leafs)[i].id == v) {
-                //        (*leafs)[i].dist = curr_depth - 1;
-                //        break;
-                //    }
-                //}
-            //}
+            }
         }
     }
     if (leafs != NULL && !compute_leafs) { // updating leafs
@@ -143,7 +132,7 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
 }
 
 /** MOD: Added in order to get the list of vertices located in the middle level(s) of the bfs tree
- ** TODO: depth_bfs_tree could return the by level vertices list for quicker computation
+ ** TODO: depth_bfs_tree could return the by level vertices list for quicker computation, using dynamic sized array and realloc...
  **/
 int* compute_central_vertices(graph *g, int start, int *resulting_size, int* next_node, int *diameter, int *diam_upper)
 {
@@ -315,15 +304,14 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
     goto DIAMETRALBFS;
     // main loop
     do {
-        fprintf(stderr, "Diametral BFS...\n");
         tmp_leaf = pop_farthest_leaf(leafs, &nb_leafs);
-        fprintf(stderr, "%d leafs\n", nb_leafs);
         if (tmp_leaf == NULL)
             break;
         v = tmp_leaf->id;
         free(middle_nodes);
         // * diametral BFS (from v)
-    DIAMETRALBFS: temp_middle_nodes = compute_central_vertices(g, v, &temp_middle_size, &v, &max_dist, &temp_upper_diam);
+    DIAMETRALBFS: fprintf(stderr, "Diametral BFS (from %d)... (%d leafs)\n", v, nb_leafs + 1);
+        temp_middle_nodes = compute_central_vertices(g, v, &temp_middle_size, &v, &max_dist, &temp_upper_diam);
         if (temp_middle_nodes == NULL)
             return;
         // * diametral BFS bounds: lower_diam & upper_diam
@@ -344,20 +332,22 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
             leafs = NULL;
         }
     CENTRALBFS: depth_tree = depth_bfs_tree(g, u, &max_dist, NULL, leafs, &nb_leafs);
-        fprintf(stderr, "%d leafs\n", nb_leafs);
+        fprintf(stderr, "Central BFS (from %d) DONE (%d leafs)\n", u, nb_leafs);
         // * central BFS bounds: rayon
         rayon = min(rayon, max_dist); // middle nodes are great to approximate rayon
         finished = remove_leafs_closer_than(leafs, &nb_leafs, lower_diam / 2);
-        free(depth_tree); // TODO: do we use this ?
+        // TODO: do we use this ?
+        // TODO: -> get rid of struct leaf_node and have g->n sized int array instead
+        // TODO: this will save 1 g->n sized int array !
+        free(depth_tree);
         fprintf(stdout, "%dth iteration %d %d %d\n", iter, lower_diam, upper_diam, rayon);
         //fprintf(stderr, "%d, %d, %d, %d\n", finished, iter, num_iterations, nb_leafs);
-        fprintf(stderr, "%d leafs\n", nb_leafs);
     } while(!finished && ++iter < num_iterations);
     // we still have middle_nodes access
     fprintf(stdout, "Center nodes found:\n");
     for (i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
-    fprintf(stdout, "\n%d BFS done\n", 2*iter);
+    fprintf(stdout, "\n%d BFS done\n", 2*iter + 1);
     fprintf(stdout, "Final values: %d %d %d\n", lower_diam, upper_diam, rayon);
     fprintf(stdout, "Approximated diameter: %d; Approximated rayon: %d\n", lower_diam, rayon);
     free(histo_center_nodes);
@@ -372,7 +362,7 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
  ** - Do bfs from these nodes
  ** - Store the bfs somehow (tree or list) (depth list)
  ** - We get a center approximation and a rayon approximation
- ** - (First version TODO) make intersection between lists found
+ ** - (First version) make intersection between lists found
  ** TODO:
  ** - entire graph loop costs (same with center rayon's comment):
  ** - depth_bfs_tree could return the by level vertices list for quicker computation
@@ -463,10 +453,7 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1); // FIXME: remove hardcoded and use parameter
     for (int i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
-    //copy_node = middle_nodes[random()%middle_nodes_size]; // one most probable middle node
-    // TODO: parameter for maximum probable middle nodes number BFS for better rayon and diameter
     // perform BFS from central nodes to get diametral node to perform BFS
-    // TODO: test this version:
     // at each iteration:
     // - from node u: 1 BFS for better center, rayon, diam approximation
     //   (gives us a list of most probable centers)
