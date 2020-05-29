@@ -73,16 +73,18 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
     q = empty_queue(g->n + 1);
     if( (depth_tree = (int*)malloc((g->n + 1) * sizeof(int))) == NULL )
         report_error("bfs_tree: malloc() error");
-    if( (tree=(int *)malloc(g->n*sizeof(int))) == NULL )
+    if(magnien_tree != NULL && (tree=(int *)malloc(g->n*sizeof(int))) == NULL ) // no need of malloc if not used
         report_error("bfs_tree: malloc() error");
     for (i=0;i<g->n;++i){
         depth_tree[i] = -1;
-        tree[i] = -1;
+        if (magnien_tree != NULL)
+            tree[i] = -1;
     }
     queue_add(q,v);
     queue_add(q, -1); // -1 special value acts as level seperator
     depth_tree[v] = curr_depth++;
-    tree[v] = v;
+    if (magnien_tree != NULL)
+        tree[v] = v;
     while (!is_empty_queue(q)) {
         v = queue_get(q);
         if (v == -1){
@@ -99,7 +101,8 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
                 queue_add(q,u);
                 is_leaf = false;
                 depth_tree[u] = curr_depth;
-                tree[u] = v;
+                if (magnien_tree != NULL)
+                    tree[u] = v;
             }
         }
         /** leafs computation **/
@@ -126,8 +129,6 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
 
     if (magnien_tree != NULL)
         *magnien_tree = tree;
-    else
-        free(tree);
     return(depth_tree);
 }
 
@@ -156,7 +157,7 @@ int* compute_central_vertices(graph *g, int start, int *resulting_size, int* nex
     }
     if (counter == 0) {
         free(depth_tree);
-        fprintf(stderr, "compute_central_vertices: no middle vertices could be found !"); // ? report_error
+        report_error("compute_central_vertices: no middle vertices could be found !");
         *resulting_size = 0;
         return NULL;
     }
@@ -344,7 +345,6 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
         // TODO: this will save 1 g->n sized int array !
         free(depth_tree);
         fprintf(stdout, "%dth iteration %d %d %d\n", iter, lower_diam, upper_diam, rayon);
-        //fprintf(stderr, "%d, %d, %d, %d\n", finished, iter, num_iterations, nb_leafs);
     } while(!finished && ++iter < num_iterations);
     // we still have middle_nodes access
     fprintf(stdout, "Center nodes found:\n");
@@ -403,8 +403,8 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
     int counter_limit = 100;
 
     int *results = NULL;
-    int job_node = get_multisweep_node(g, start, &max_dist);
-    cur_rayon_approx = max_dist; // this is a not diametral vertice we do not /= 2
+    int job_node = get_multisweep_node(g, start, &max_dist); // get a diametrical node from random start one
+    cur_rayon_approx = max_dist; // this is a not diametrical distance we do not /= 2
     lower_diam = max_dist;
 
     if (job_node == -1)
@@ -453,7 +453,6 @@ void calculate_center(graph *g, int start, int num_iterations, int* c, int c_gia
             if (job_node == -1)
                 report_error("calculate_center: get_multisweep_node: error finding node");
         }
-
     }
     fprintf(stdout, "Center nodes found:\n");
     middle_nodes = ratio_histo(histo_center_nodes, g->n, &middle_nodes_size, 1);
