@@ -28,6 +28,8 @@ int *giant_perm(graph *g, int *c, int size_giant, int c_giant);
 
 int min(int a, int b);
 
+float min_float(float a, float b);
+
 int find_maximum(int *a, int n);
 
 int *intersection_lists(int *list1, int *list2, int size1, int size2, int *resulting_size);
