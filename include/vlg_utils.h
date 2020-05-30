@@ -9,16 +9,11 @@
 
 /******** LEAFS UTILITY - begin *********/
 
-struct leaf_node {
-    int id; /** id of the leaf vertice **/
-    int dist; /** distance from BFS starting point **/
-}; /** leaf_node structure to old vertice id and distance from BFS start **/
+void swap_leafs(int *a, int *b);
 
-void swap_leafs(struct leaf_node *a, struct leaf_node *b);
+bool remove_leafs_closer_than(int *depth_tree, int *leafs, int *nb_leafs, int min_dist);
 
-bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_dist);
-
-struct leaf_node *pop_farthest_leaf(struct leaf_node *leafs, int *nb_leafs);
+int pop_farthest_leaf(int *depth_tree, int *leafs, int *nb_leafs);
 
 /******** LEAFS UTILITY - end *********/
 

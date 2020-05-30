@@ -6,6 +6,10 @@
 #ifndef VLG_MAGNIEN_PRELIM_H
 #define VLG_MAGNIEN_PRELIM_H
 
+#ifdef TEST // Mod: Added for testing purposes
+#define _GNU_SOURCE // Mod: Added for qsort_r
+#endif // TEST
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

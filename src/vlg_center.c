@@ -62,7 +62,7 @@ static inline int get_vertice_eccentricity(graph *g, int start) {
  **                                beware: (v should not be a leaf itself for leaf detections
  **                                to get all graph leafs)
  **/
-int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_node *leafs, int *nb_leafs)
+int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, int *leafs, int *nb_leafs)
 {
     bool compute_leafs = leafs != NULL && *nb_leafs == 0; // watch out with order here
     int u, i, is_leaf;
@@ -108,13 +108,12 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
         /** leafs computation **/
         if (leafs != NULL && is_leaf) {
             if (compute_leafs) { // recompute all leafs
-                leafs[*nb_leafs].id = v;
-                leafs[*nb_leafs].dist = curr_depth - 1;
+                leafs[*nb_leafs] = v;
                 *nb_leafs += 1; // watch out not ++; !
             }
         }
     }
-    if (leafs != NULL && !compute_leafs) { // updating leafs
+    /**if (leafs != NULL && !compute_leafs) { // updating leafs
         // if leafs are supposed to be updated, go through them and take there depth as
         for (i = 0; i < *nb_leafs; ++i) {
             if (depth_tree[leafs[i].id] != -1) {
@@ -123,7 +122,7 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, struct leaf_n
                 report_error("Something went really bad, computed leaf not in BFS");
             }
         }
-    }
+    }**/
     *max = curr_depth - 1;
     free_queue(q);
 
@@ -285,7 +284,7 @@ int random_node_depthtree(int *tree, int size, int max)
  **/
 void compute_center_convergence(graph *g, int num_iterations, int* c, int c_giant)
 {
-    struct leaf_node *leafs, *tmp_leaf; // leafs is array, tmp_leaf is ptr
+    int *leafs, tmp_leaf;
     int *depth_tree, *temp_middle_nodes, *middle_nodes, *histo_center_nodes;
     int max_dist = 0, temp_middle_size, middle_nodes_size, nb_leafs = 0;
     int lower_diam = 0, rayon = ~0U >> 1, upper_diam = -1, temp_upper_diam = 0;
@@ -293,7 +292,7 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
     bool finished = false; // if true, there is no more leafs
     if ((histo_center_nodes = calloc(g->n + 1, sizeof(int)))== NULL)
         report_error("compute_center_convergence: malloc error histo");
-    if ((leafs = (struct leaf_node *)calloc(g->n, sizeof(struct leaf_node)))== NULL)
+    if ((leafs = (int *)calloc(g->n, sizeof(int)))== NULL)
         report_error("compute_center_convergence: malloc error histo");
     printf("#1:i=iteration_number #2:best_lower_diam_bound #3:best_upper_diam_bound #4:best_rayon\n");
     // INIT
@@ -305,10 +304,10 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
     goto DIAMETRALBFS;
     // main loop
     do {
-        tmp_leaf = pop_farthest_leaf(leafs, &nb_leafs);
-        if (tmp_leaf == NULL)
+        v = pop_farthest_leaf(depth_tree, leafs, &nb_leafs);
+        if (v == -1)
             break;
-        v = tmp_leaf->id;
+        free(depth_tree);
         free(middle_nodes);
         // * diametral BFS (from v)
     DIAMETRALBFS: fprintf(stderr, "Diametral BFS (from %d)... (%d leafs)\n", v, nb_leafs + 1);
@@ -339,11 +338,10 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
         fprintf(stderr, "Central BFS (from %d) DONE (%d leafs)\n", u, nb_leafs);
         // * central BFS bounds: rayon
         rayon = min(rayon, max_dist); // middle nodes are great to approximate rayon
-        finished = remove_leafs_closer_than(leafs, &nb_leafs, lower_diam / 2);
+        finished = remove_leafs_closer_than(depth_tree, leafs, &nb_leafs, lower_diam / 2);
         // TODO: do we use this ?
         // TODO: -> get rid of struct leaf_node and have g->n sized int array instead
         // TODO: this will save 1 g->n sized int array !
-        free(depth_tree);
         fprintf(stdout, "%dth iteration %d %d %d\n", iter, lower_diam, upper_diam, rayon);
     } while(!finished && ++iter < num_iterations);
     // we still have middle_nodes access
@@ -357,6 +355,7 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
     if (leafs != NULL)
         free(leafs);
     free(middle_nodes);
+    free(depth_tree);
 }
 
 /** MOD: Added
