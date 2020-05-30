@@ -111,18 +111,10 @@ int *depth_bfs_tree(graph *g, int v, int *max, int **magnien_tree, int *leafs, i
                 leafs[*nb_leafs] = v;
                 *nb_leafs += 1; // watch out not ++; !
             }
+            // update is already done with depth_tree access ;)
+            // sadly every time same leafs => remove_leafs_closer_than not in place
         }
     }
-    /**if (leafs != NULL && !compute_leafs) { // updating leafs
-        // if leafs are supposed to be updated, go through them and take there depth as
-        for (i = 0; i < *nb_leafs; ++i) {
-            if (depth_tree[leafs[i].id] != -1) {
-                leafs[i].dist = depth_tree[leafs[i].id];
-            } else {
-                report_error("Something went really bad, computed leaf not in BFS");
-            }
-        }
-    }**/
     *max = curr_depth - 1;
     free_queue(q);
 
@@ -289,7 +281,6 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
     int max_dist = 0, temp_middle_size, middle_nodes_size, nb_leafs = 0;
     int lower_diam = 0, rayon = ~0U >> 1, upper_diam = -1, temp_upper_diam = 0;
     int u,v, i, iter = 1;
-    bool finished = false; // if true, there is no more leafs
     if ((histo_center_nodes = calloc(g->n + 1, sizeof(int)))== NULL)
         report_error("compute_center_convergence: malloc error histo");
     if ((leafs = (int *)calloc(g->n, sizeof(int)))== NULL)
@@ -304,9 +295,7 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
     goto DIAMETRALBFS;
     // main loop
     do {
-        v = pop_farthest_leaf(depth_tree, leafs, &nb_leafs);
-        if (v == -1)
-            break;
+        // popping the farthest is done at loop end
         free(depth_tree);
         free(middle_nodes);
         // * diametral BFS (from v)
@@ -338,12 +327,9 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
         fprintf(stderr, "Central BFS (from %d) DONE (%d leafs)\n", u, nb_leafs);
         // * central BFS bounds: rayon
         rayon = min(rayon, max_dist); // middle nodes are great to approximate rayon
-        finished = remove_leafs_closer_than(depth_tree, leafs, &nb_leafs, lower_diam / 2);
-        // TODO: do we use this ?
-        // TODO: -> get rid of struct leaf_node and have g->n sized int array instead
-        // TODO: this will save 1 g->n sized int array !
+        v = remove_leafs_closer_than_and_pop_farthest(depth_tree, leafs, &nb_leafs, lower_diam / 2);
         fprintf(stdout, "%dth iteration %d %d %d\n", iter, lower_diam, upper_diam, rayon);
-    } while(!finished && ++iter < num_iterations);
+    } while(v != -1 && ++iter < num_iterations);
     // we still have middle_nodes access
     fprintf(stdout, "Center nodes found:\n");
     for (i = 0; i < middle_nodes_size; ++i)

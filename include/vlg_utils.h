@@ -11,6 +11,8 @@
 
 void swap_leafs(int *a, int *b);
 
+int remove_leafs_closer_than_and_pop_farthest(int *depth_tree, int *leafs, int *nb_leafs, int min_dist);
+
 bool remove_leafs_closer_than(int *depth_tree, int *leafs, int *nb_leafs, int min_dist);
 
 int pop_farthest_leaf(int *depth_tree, int *leafs, int *nb_leafs);
