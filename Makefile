@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -O3 -Iinclude
-CGDBFLAGS = -O3 -Iinclude -g -DTEST
+CGDBFLAGS = -O3 -Iinclude -g -DTEST -D_GNU_SOURCE
 BIN = diam
 SRCS = $(wildcard src/*.c)
 OBJS = ${SRCS:.c=.o}
