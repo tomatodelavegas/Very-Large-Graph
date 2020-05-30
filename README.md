@@ -26,24 +26,20 @@ The **"src/diam.c"** file is however a modified version of the original.
 
 1. Compile the program:
 ```
-  gcc -O3 diam.c -o diam
+ make
 ```
 2. Run it:
 ```
- ./diam -diam nb_max difference < data_file
+ ./diam -center nb_iterations < data_file
 ```
-  for computing bounds for the diameter for 'nb_max' steps
-  or until the difference between the best obtained bounds
-  is equal to or lower than 'difference'.
+  for computing diameter bounds with the radius and center nodes for "nb_iterations" iterations using the **multisweep** bruteforce.
 
 or
 
 ```
- ./diam -prec nb_max precision < data_file
+ ./diam -centerconv nb_iterations < data_file
 ```
-  for computing bounds for the diameter for '**nb_max**' steps
-  or until the diameter is estimated with a relative error
-  of at most '**precision**'.
+  for computing diameter bounds with the radius and center nodes for "nb_iterations" iterations using the leafs **convergence** method.
 
 # Input Format
 
@@ -74,6 +70,29 @@ has degree 2, and node 2 has degree 2 too, and the links are 0 1,
 
 # Command Line Options 
 
+## Center/Radius/Diameter Approximation
+
+Two different options are at your choosing in order to calculate
+the center, the radius and the diameter bounds approximated.
+Keep in mind these are approximations but tends to get close to the truth
+the more iterations there are.
+
+The first option is a bruteforce multisweep, it first picks a random node
+from the giant component of the graph. Then to apply a BFS on top of it in order
+to get a possible diametrical node. 
+The work involved behind the curtain is explained in the paper accompanying
+this code.
+```
+./diam -center nb_iterations
+```
+
+The second option is a leaf convergence method, which is faster in most cases.
+The exact implementation is detailled in the report.
+```
+./diam -centerconv nb_iterations
+```
+
+## Magnien Diameter Approximation
 
 The standard way of using the program is to compute both upper and 
 lower bounds for the diameter, until the difference between them is
@@ -120,6 +139,32 @@ bounds):
 ```
 
 # Output
+
+## Center/Radius/Diameter Approximation
+
+The program writes the results on the standard output. Thus,
+if you want to save them you should redirect it, using
+typically:
+```
+./diam -center 20 < data_file > result_file
+```
+Both -center and -centerconv also writes informations on the standard error output.
+
+The output format consists of multiple lines per iteration, providing
+the following informations:
+ - iteration number
+ - number of node chosen for computing the bound
+ - value of the obtained bound
+ - value of an approximated radius.
+
+At the end of the program, will be displayed:
+ - center nodes found
+ - optimal diameter bounds found
+ - approximated diameter
+ - approximated optimal radius
+ - number of BFS done
+
+## Magnien Diameter Approximation
 
 The program writes the results on the standard output. Thus,
 if you want to save them you should redirect it, using
