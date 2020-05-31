@@ -30,7 +30,7 @@ The **"src/diam.c"** file is however a modified version of the original.
 ```
 2. Run it:
 ```
- ./diam -center nb_iterations 1 < data_file
+ ./diam -center nb_iterations check_centers < data_file
 ```
   for computing diameter bounds with the radius and center nodes for "nb_iterations" iterations using the **multisweep** bruteforce.
 
