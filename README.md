@@ -30,7 +30,7 @@ The **"src/diam.c"** file is however a modified version of the original.
 ```
 2. Run it:
 ```
- ./diam -center nb_iterations < data_file
+ ./diam -center nb_iterations 1 < data_file
 ```
   for computing diameter bounds with the radius and center nodes for "nb_iterations" iterations using the **multisweep** bruteforce.
 
@@ -83,8 +83,10 @@ to get a possible diametrical node.
 The work involved behind the curtain is explained in the paper accompanying
 this code.
 ```
-./diam -center nb_iterations
+./diam -center nb_iterations check_centers
 ```
+Here the check_centers parameter is to specify if the program should perform a bfs on every found center nodes (check_centers!=0) at the end of the iterations or only perform on one on a random nodes to approximate better bounds/radius(check_centers==0).  
+It's preferable to use check_centers at 0 when there are a lot of center nodes found.
 
 The second option is a leaf convergence method, which is faster in most cases.
 The exact implementation is detailled in the report.
@@ -146,7 +148,7 @@ The program writes the results on the standard output. Thus,
 if you want to save them you should redirect it, using
 typically:
 ```
-./diam -center 20 < data_file > result_file
+./diam -center 20 1 < data_file > result_file
 ```
 Both -center and -centerconv also writes informations on the standard error output.
 

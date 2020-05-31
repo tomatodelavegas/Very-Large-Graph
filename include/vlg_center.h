@@ -23,7 +23,7 @@ int random_node_depthtree(int *tree, int size, int max);
 
 void compute_center_convergence(graph *g, int num_iterations, int* c, int c_giant);
 
-void calculate_center(graph *g, int start, int num_iterations, int* c, int c_giant);
+void calculate_center(graph *g, int start, int num_iterations, int* c, int c_giant, bool check_centers);
 
 /******** GRAPH CENTER functions - end *********/
 
