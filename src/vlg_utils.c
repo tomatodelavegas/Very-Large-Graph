@@ -37,8 +37,9 @@ int min(int a, int b) {
     return a < b ? a : b;
 }
 
-float min_float(float a, float b){
-    return a < b ? a : b;
+/** MOD: Added */
+float max_float(float a, float b){
+    return a < b ? b : a;
 }
 
 /** MOD: Max of an array of int */

@@ -17,7 +17,7 @@
 
 void usage(char *c){
   fprintf(stderr,"Usage: %s -diam nb_max difference\n",c);
-  fprintf(stderr,"Usage: %s -center nb_iteration\n",c); // MOD: center bruteforce calculation option
+  fprintf(stderr,"Usage: %s -center nb_iteration check_centers\n",c); // MOD: center bruteforce calculation option
   fprintf(stderr,"Usage: %s -centerconv nb_iteration\n",c); // MOD: center convergence calculation option
   fprintf(stderr,"Usage: %s -prec nb_max precision\n",c);
   fprintf(stderr,"Usage: %s -tlb|dslb|tub|rtub|hdtub nb [deg_begin]\n",c);
@@ -26,7 +26,8 @@ void usage(char *c){
   fprintf(stderr," -prec nb_max precision: compute bounds for the diameter until it is evaluated with a relative error of at most 'precision', or until nb_max iterations have been done.\n");
   fprintf(stderr," -savegiant fpath: saves the giant component to the specified folder.\n"); // MOD: Added this option to save the giant component
   fprintf(stderr," -savegiantbfs fpath: saves the giant component to the specified folder using BFS reordering.\n"); // MOD: Added this option to save the giant component (BFS method)
-  fprintf(stderr," -center nb_iteration: compute the best graph centers/radius/diameter candidates with a bruteforce multisweep method.\n"); // MOD: Added this option to compute the center (BFS probability method)
+  fprintf(stderr," -center nb_iteration check_centers: compute the best graph centers/radius/diameter candidates with a bruteforce multisweep method.\n"); // MOD: Added this option to compute the center (BFS probability method)
+  fprintf(stderr," check_centers>0 means performing a bfs at the end on all found centers and approximating better bounds and radius, if ==0 then it will be performed only on a random one\n");
   fprintf(stderr," -centerconv nb_iteration: compute the best graph centers/radius/diameter candidates with a convergence of leafs method.\n"); // MOD: Added this option to compute the center (BFS intersection method)
   fprintf(stderr, "\n");
   fprintf(stderr, " -tlb nb: computes trivial lower bounds, from nb randomly chosen nodes.\n");
@@ -48,7 +49,7 @@ int main(int argc, char **argv){
   int deg_begin=0;
   float precision;
   int *c, *c_s, nb_c, c_giant, size_giant;
-  int num_iteration;
+  int num_iteration, check_centers;
 
 
   srandom(time(NULL));
@@ -77,9 +78,10 @@ int main(int argc, char **argv){
     }
     else if (strcmp(argv[i],"-center")==0) { // MOD: Added option
       center = 1;
-      if (i == argc - 1)
+      if ((i==argc-2) || (i==argc-1))
         usage(argv[0]);
       num_iteration = atoi(argv[++i]);
+      check_centers = atoi(argv[++i]);
     }
     else if (strcmp(argv[i],"-centerconv")==0) { // MOD: Added option
       centerconv = 1;
@@ -201,7 +203,7 @@ int main(int argc, char **argv){
     int v = random()%g->n;
     while (c[v] != c_giant)
       v = random()%g->n;
-    calculate_center(g, v, num_iteration, c, c_giant);
+    calculate_center(g, v, num_iteration, c, c_giant, check_centers!=0);
     fflush(stdout);
     end = clock();
     elapsed = (double)(end - begin) / CLOCKS_PER_SEC;
