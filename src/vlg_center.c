@@ -329,12 +329,12 @@ void compute_center_convergence(graph *g, int num_iterations, int* c, int c_gian
         rayon = min(rayon, max_dist); // middle nodes are great to approximate rayon
         v = remove_leafs_closer_than_and_pop_farthest(depth_tree, leafs, &nb_leafs, lower_diam / 2);
         fprintf(stdout, "%dth iteration %d %d %d\n", iter, lower_diam, upper_diam, rayon);
-    } while(v != -1 && ++iter < num_iterations);
+    } while(v != -1 && ++iter <= num_iterations);
     // we still have middle_nodes access
     fprintf(stdout, "Center nodes found:\n");
     for (i = 0; i < middle_nodes_size; ++i)
         fprintf(stdout, "%d ", middle_nodes[i]);
-    fprintf(stdout, "\n%d BFS done\n", 2*iter + 1);
+    fprintf(stdout, "\n%d BFS done\n", v == -1 ? 2*iter + 1 : 2*(iter - 1) + 1);
     fprintf(stdout, "Final values: %d %d %d\n", lower_diam, upper_diam, rayon);
     fprintf(stdout, "Approximated diameter: %d; Approximated rayon: %d\n", lower_diam, rayon);
     free(histo_center_nodes);
