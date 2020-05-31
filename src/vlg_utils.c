@@ -7,8 +7,8 @@
 
 /******** UTILITY functions - begin *********/
 
-void swap_leafs(struct leaf_node *a, struct leaf_node *b) {
-    struct leaf_node temp = *a;
+void swap_leafs(int *a, int *b) {
+    int temp = *a;
     *a = *b;
     *b = temp;
 }
@@ -59,6 +59,53 @@ int find_maximum(int *a, int n) {
 }
 
 /**
+ ** Will remove all leafs <= given min_dist (lower moves number usage).
+ ** Additionnaly, return -1 (if no more leafs), or the poped farthest leaf
+ **
+ ** int *depth_tree:    the depth_tree array for leafs distances access
+ ** int *leafs:         the leafs array
+ ** int *nb_leafs:      the number of leafs in the array
+ ** int min_dist:       the minimal leaf distances
+ **
+ ** returns int:        the farthest leaf node (popped)
+ ** NB: *nb_leafs can be 0 after function call, since we pop the farthest at the end of function (!= -1)
+ **/
+int remove_leafs_closer_than_and_pop_farthest(int *depth_tree, int *leafs, int *nb_leafs, int min_dist)
+{
+    if (*nb_leafs < 0)
+        report_error("remove_leafs_closer_than_and_pop_farthest: leafs list is NULL");
+    if (leafs == NULL || *nb_leafs == 0)
+        return -1;
+    int i;
+    int max_l_id = 0;
+    int max_d = depth_tree[leafs[max_l_id]];
+    for (i = *nb_leafs - 1; i >= 0 && *nb_leafs > 0; --i) {
+        // remove_leafs_close_than
+        if (depth_tree[leafs[i]] < min_dist) {
+            if (i < *nb_leafs - 1) { // we swap only if elements after us have been kept
+                memmove((leafs + i), (leafs + *nb_leafs - 1), sizeof(int));
+                if (*nb_leafs -1 == max_l_id) // we need to swap indexes
+                    max_l_id = i;
+            }
+            *nb_leafs -= 1;
+        } else {
+            // get the farthest, a farthest cannot be one that's lower than min_dist
+            if (depth_tree[leafs[i]] > max_d) {
+                max_l_id = i;
+                max_d = depth_tree[leafs[max_l_id]];
+            }
+        }
+    }
+    if (*nb_leafs == 0)// all we did was remove, mo possible maximum
+        return -1;
+    // now swap last element with max_leaf return max_leaf
+    // (which is now at end of array)
+    swap_leafs(leafs + max_l_id, leafs + *nb_leafs - 1);
+    *nb_leafs -= 1; // *nb_leafs is decreased since we pop...
+    return leafs[*nb_leafs]; // allready decreased
+}
+
+/**
  ** remove_leafs_closer_than: remove leafs that are closer than the given dist
  **
  ** struct leaf_node *leafs:    leafs array
@@ -67,7 +114,7 @@ int find_maximum(int *a, int n) {
  **
  ** returns bool:               returns true if there is no more leafs in the array
  **/
-bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_dist)
+bool remove_leafs_closer_than(int *depth_tree, int *leafs, int *nb_leafs, int min_dist)
 {
     if (*nb_leafs < 0)
         report_error("remove_leafs_closer_than: leaf list size negative");
@@ -75,11 +122,11 @@ bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_di
         return true;
     int i;
     for (i = 0; i < *nb_leafs;) {
-        if (leafs[i].dist < min_dist) {
+        if (depth_tree[leafs[i]] < min_dist) {
             // remove leafs[i]; leafs[i] will be last element, size is decreased
             // MAN: memmove(dest, src, nbbytes);
             // TODO: consider using memcpy since there should not be overlapping
-            memmove((leafs + i), (leafs + *nb_leafs - 1), sizeof(struct leaf_node));
+            memmove((leafs + i), (leafs + *nb_leafs - 1), sizeof(int));
             *nb_leafs -= 1;
             if (*nb_leafs == 0)
                 return true;
@@ -98,26 +145,26 @@ bool remove_leafs_closer_than(struct leaf_node *leafs, int *nb_leafs, int min_di
  **
  ** returns struct leaf_node *:     the farthest leaf node, or NULL if no more leaf
  **/
-struct leaf_node *pop_farthest_leaf(struct leaf_node *leafs, int *nb_leafs)
+int pop_farthest_leaf(int *depth_tree, int *leafs, int *nb_leafs)
 {
     if (leafs == NULL || *nb_leafs < 0)
         report_error("pop_farthest_leaf: leafs list is NULL");
-    if (nb_leafs == 0)
-        return NULL;
+    if (*nb_leafs == 0)
+        return -1;
     int i;
-    struct leaf_node *max_leaf = leafs;
-    int max = max_leaf->dist;
+    int *max_l = leafs;
+    int max_d = depth_tree[*max_l];
     for (i = 1; i < *nb_leafs; ++i) {
-        if (leafs[i].dist > max) {
-            max_leaf = leafs + i;
-            max = max_leaf->dist;
+        if (depth_tree[leafs[i]] > max_d) {
+            max_l = leafs + i;
+            max_d = depth_tree[*max_l];
         }
     }
     // now swap last element with max_leaf return max_leaf
     // (which is now at end of array)
-    swap_leafs(max_leaf, leafs + *nb_leafs - 1);
+    swap_leafs(max_l, leafs + *nb_leafs - 1);
     *nb_leafs -= 1; // *nb_leafs is decreased
-    return leafs + *nb_leafs; // allready decreased
+    return leafs[*nb_leafs]; // allready decreased
 }
 
 /**
