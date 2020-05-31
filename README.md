@@ -70,6 +70,19 @@ has degree 2, and node 2 has degree 2 too, and the links are 0 1,
 
 # Command Line Options 
 
+## Save giant connected component
+
+The program includes two options of computing and saving the giant component of a graph:
+```
+./diam -savegiant fpath
+```
+This one saves the giant component to the specified folder using a BFS.
+
+```
+./diam -savegiantbfs fpath
+```
+This one saves the giant component to the specified folder using an in-place BFS.
+
 ## Center/Radius/Diameter Approximation
 
 Two different options are at your choosing in order to calculate
