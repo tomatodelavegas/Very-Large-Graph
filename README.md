@@ -76,12 +76,12 @@ The program includes two options of computing and saving the giant component of 
 ```
 ./diam -savegiant fpath
 ```
-This one saves the giant component to the specified folder using a BFS.
+This one saves the giant component to the specified file, reordering using array and index swapping.
 
 ```
 ./diam -savegiantbfs fpath
 ```
-This one saves the giant component to the specified folder using an in-place BFS.
+This one saves the giant component to the specified file, reordering using 2 same BFS.
 
 ## Center/Radius/Diameter Approximation
 
@@ -209,6 +209,7 @@ information.
 The program is written in ANSI C, with standard libraries.
 
 # Special thanks
+Epita teachers/researchers: Robert  ERRA, Alexandre LETOIS & Mark ANGOUSTURES
 Fast Computation of Empirically Tight Bounds
   for the Diameter of Massive Graphs
 Clémence Magnien, Matthieu Latapy, and Michel Habib,
